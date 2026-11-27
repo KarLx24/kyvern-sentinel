@@ -43,7 +43,7 @@ export class Stage {
 
     this.camera = new THREE.PerspectiveCamera(30, 1, 0.1, 400);
     this.focus = new THREE.Vector3(0, 1.95, 0);
-    this.homeDir = new THREE.Vector3(0.28, 0.1, 1).normalize();
+    this.homeDir = new THREE.Vector3(0.58, 0.16, 1).normalize(); // three-quarter view, so depth reads
     this.baseDistance = opts.distance || 11.5;
     this.zoom = 1;
     this.reach = 1; // the model asks for more room when it is fully taken apart
@@ -90,9 +90,9 @@ export class Stage {
 
   lights() {
     const t = this.theme;
-    this.scene.add(new THREE.HemisphereLight('#d5dae2', '#1a1c20', 0.75));
-    const key = new THREE.DirectionalLight(t.key, 2.4);
-    key.position.set(4.5, 9, 7);
+    this.scene.add(new THREE.HemisphereLight('#cfd6e2', '#0c0d10', 0.3));
+    const key = new THREE.DirectionalLight(t.key, 3.4);
+    key.position.set(6.5, 9, 5.5); // well off to one side, so every plate has a lit face and a dark one
     key.castShadow = true;
     key.shadow.mapSize.set(2048, 2048);
     key.shadow.bias = -0.0004;
@@ -105,11 +105,11 @@ export class Stage {
     this.key = key;
     this.keyOffset = key.position.clone();
     this.scene.add(key, key.target);
-    const cool = new THREE.DirectionalLight(t.rimCool, 0.5);
+    const cool = new THREE.DirectionalLight(this.studio ? '#dfe8f5' : t.rimCool, this.studio ? 2.2 : 0.9);
     cool.position.set(-7, 5, -8);
-    const warm = new THREE.DirectionalLight(t.rimWarm, 0.9);
+    const warm = new THREE.DirectionalLight(this.studio ? '#ffe2c4' : t.rimWarm, this.studio ? 1.6 : 0.9);
     warm.position.set(8, 3.5, -6);
-    const fill = new THREE.DirectionalLight('#c2cad8', 0.6);
+    const fill = new THREE.DirectionalLight('#c2cad8', 0.22);
     fill.position.set(-6, 2, 6);
     this.scene.add(cool, warm, fill);
   }

@@ -4,10 +4,10 @@
 // One material per role. `glow` is how hard a light role shines.
 export const ROLES = {
   // `wear` is how scuffed the metal is: 0 factory fresh (the clean look Karl chose), 1 scratched plate
-  armor: { rough: 0.42, metal: 0.35, env: 0.9, wear: 0 },
-  armor2: { rough: 0.48, metal: 0.3, env: 0.85, wear: 0 },
-  frame: { rough: 0.55, metal: 0.7, env: 0.7, wear: 0 },
-  trim: { rough: 0.34, metal: 1, env: 1.1, wear: 0 },
+  armor: { rough: 0.34, metal: 0.7, env: 1.3, wear: 0 },
+  armor2: { rough: 0.4, metal: 0.6, env: 1.15, wear: 0 },
+  frame: { rough: 0.5, metal: 0.85, env: 0.9, wear: 0 },
+  trim: { rough: 0.28, metal: 1, env: 1.35, wear: 0 },
   mark: { rough: 0.45, metal: 0.3 },
   visor: { rough: 0.12, metal: 0.9, color: '#04070b' },
   glow: { glow: 1.5 },

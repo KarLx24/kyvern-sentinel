@@ -620,6 +620,8 @@ def build_side(tag, mirror):
         w = 0.25 + 0.04 * k
         bl = empty('blade_%s_%d' % (tag, i + 1), wd, (WR.x, WR.y - 0.02 + i * 0.03, WR.z), (0, -ang, 0))
         plate('Blade', [(0.0, -w * 0.5), (ln * 0.26, -w), (ln, -w * 1.35), (ln * 0.985, -w * 0.9), (ln * 0.9, w * 0.3), (0.0, w * 0.5)], 0.026, BL if i % 2 else A2, bl, inset=0.012, bevel=0.005)
+        beam('Blade spine', (ln * 0.06, -0.03, -w * 0.25), (ln * 0.9, -0.03, -w * 0.5), w * 0.34, 0.03, A, bl, bevel=0.012)
+        beam('Blade spine', (ln * 0.06, 0.012, -w * 0.25), (ln * 0.9, 0.012, -w * 0.5), w * 0.34, 0.03, A, bl, bevel=0.012)
         plate('Blade root', [(0.05, -w * 0.72), (ln * 0.27, -w * 1.12), (ln * 0.34, -w * 0.3), (0.07, w * 0.62)], 0.018, A, bl, (0, -0.026, 0), inset=0.008, bevel=0.004)
         seam(bl, [(ln * 0.3, -0.03, -w * 1.0), (ln * 0.975, -0.03, -w * 1.31)], width=0.026, depth=0.012)
         bolts(bl, [(ln * 0.1, 0.0), (ln * 0.2, -w * 0.3)], -0.046, 0.01, T)
