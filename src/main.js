@@ -109,10 +109,7 @@ const api = {
     hud.setForm(id, FORMS[id].caption);
   },
   setLine(id) {
-    if (!paint.set(id)) return;
-    hud.setLine(id, paint.line().roles.glow);
-    sparks.material.color.set(paint.line().roles.glow);
-    sparkLife = 1;
+    if (paint.set(id)) hud.setLine(id, paint.line().roles.glow);
   },
   setState(id) {
     if (!STATES[id]) return;
@@ -264,43 +261,7 @@ canvas.addEventListener('dblclick', () => stage.home());
 // ---- labels -----------------------------------------------------------------------------
 const tmp = new THREE.Vector3();
 
-// Sparks thrown off the core while it charges for a colour change.
-const SPARKS = 90;
-const sparkPos = new Float32Array(SPARKS * 3);
-const sparkVel = Array.from({ length: SPARKS }, () => new THREE.Vector3());
-const sparkAge = new Float32Array(SPARKS).fill(9);
-const sparks = new THREE.Points(
-  new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(sparkPos, 3)),
-  new THREE.PointsMaterial({ size: 0.07, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }),
-);
-sparks.frustumCulled = false;
-stage.scene.add(sparks);
-let sparkLife = 0;
-let sparkNext = 0;
 const corePos = new THREE.Vector3();
-function updateSparks(dt) {
-  model.reactor.getWorldPosition(corePos);
-  if (paint.charge > 0) {
-    // throw a few new sparks each frame, more as the charge builds
-    for (let n = 0; n < 1 + Math.floor(paint.charge * 4); n++) {
-      const i = sparkNext++ % SPARKS;
-      sparkAge[i] = 0;
-      sparkVel[i].set(Math.random() - 0.5, Math.random() - 0.35, Math.random() * 0.7 + 0.2).normalize().multiplyScalar(0.8 + Math.random() * 1.8);
-      corePos.toArray(sparkPos, i * 3);
-    }
-  }
-  for (let i = 0; i < SPARKS; i++) {
-    if (sparkAge[i] > 1) { sparkPos[i * 3 + 1] = -50; continue; }
-    sparkAge[i] += dt * 1.6;
-    sparkVel[i].y -= dt * 2.2;
-    sparkPos[i * 3] += sparkVel[i].x * dt;
-    sparkPos[i * 3 + 1] += sparkVel[i].y * dt;
-    sparkPos[i * 3 + 2] += sparkVel[i].z * dt;
-  }
-  sparks.geometry.attributes.position.needsUpdate = true;
-  sparkLife = paint.t < 1 ? 1 : Math.max(0, sparkLife - dt * 1.2);
-  sparks.material.opacity = sparkLife;
-}
 const box = new THREE.Box3();
 const scr = { x: 0, y: 0, visible: false };
 // Each label is tied to its part: a dot sits on the part's own metal and a leader line runs
@@ -415,20 +376,18 @@ function tick(real) {
   if (Math.abs(wingGoal - wing) < 0.0015 && Math.abs(wingVel) < 0.01) { wing = wingGoal; wingVel = 0; }
   model.wings(wing, p.fanTop, p.fanBottom, time * 2.2 * p.wingBeat, forms);
   model.orbit.forEach((r, i) => {
-    const spin = behaviour.spin * (1 + paint.charge * 9); // the rings whirl while the core charges
-    r.rotation.x += dt * (0.9 + i * 0.5) * spin;
-    r.rotation.y += dt * (0.6 - i * 0.35) * spin;
+    r.rotation.x += dt * (0.9 + i * 0.5) * behaviour.spin;
+    r.rotation.y += dt * (0.6 - i * 0.35) * behaviour.spin;
   });
-  const flicker = paint.charge > 0 ? paint.charge * (0.6 + 0.4 * Math.sin(time * 47) * Math.sin(time * 31)) : 0;
-  model.reactor.scale.setScalar(1 + 0.06 * Math.sin(time * 3) + behaviour.surge * 0.25 + flicker * 0.9);
-  paint.mats.core.emissiveIntensity = glowBase.core * (behaviour.core + flicker * 3);
+  model.reactor.scale.setScalar(1 + 0.06 * Math.sin(time * 3) + behaviour.surge * 0.25);
+  paint.mats.core.emissiveIntensity = glowBase.core * behaviour.core;
   paint.mats.glow.emissiveIntensity = glowBase.glow * behaviour.seam;
   paint.mats.thrust.emissiveIntensity = p.thrust * (0.85 + 0.15 * Math.sin(time * 31)) + Math.abs(walker.fwd) * (flying ? 3 : 0);
 
   const hover = flying ? Math.sin(time * 1.6) * 0.06 : 0;
   rig.tilt.position.y = (model.hip || 1.98) + forms.height + rig.lift + (walker.bob || 0) + hover;
   focus.set(rig.root.position.x, 1.95 + forms.height * 0.85 + rig.lift * 0.7, rig.root.position.z);
-  updateSparks(real);
+  model.reactor.getWorldPosition(corePos);
   paint.update(real, corePos);
   // a full teardown is taller and wider than the robot, so the camera gives it room.
   // Opening a single part or section never moves the camera.

@@ -1,11 +1,11 @@
 // Paint: one material per role (armour, frame, trim, glow ...) shared by the whole robot,
-// and colour lines that repaint those roles. A change of line charges the core, then the new
-// colour spreads outward from it as a ring of light instead of snapping.
+// and colour lines that repaint those roles. A change of line spreads the new colour
+// slowly outward from the rim of the reactor as a ring of light instead of snapping.
 import * as THREE from 'three';
 
-const CHARGE_TIME = 0.75; // the core sparkles first
-const SWEEP_TIME = 1.9; // then the colour spreads out from it
-const REACH = 6.2; // how far from the core the colour has to travel
+const SWEEP_TIME = 5.5; // the colour spreads out slowly
+const START = 0.19; // it starts at the rim of the reactor shell, not inside it
+const REACH = 5.2; // how far from the core the colour has to travel
 
 export class Paint {
   constructor(roles, lines, first) {
@@ -20,7 +20,6 @@ export class Paint {
       uSwEdge: { value: new THREE.Color('#ffffff') },
     };
     this.t = 1;
-    this.charge = 0; // 0..1 while the core is charging before a spread
     this.spread = 0; // 0..1 while the colour is travelling
     const line = lines.find((l) => l.id === first);
     for (const [role, base] of Object.entries(roles)) {
@@ -130,7 +129,7 @@ export class Paint {
       mat.emissive.copy(mat.userData.to.uToEmissive.value);
     }
     this.t = 1;
-    this.charge = this.spread = 0;
+    this.spread = 0;
     this.shared.uSweep.value = -99;
     this.shared.uSwOn.value = 0;
   }
@@ -138,14 +137,10 @@ export class Paint {
   update(dt, origin) {
     if (origin) this.shared.uSwOrigin.value.copy(origin);
     if (this.t >= 1) return;
-    const total = CHARGE_TIME + SWEEP_TIME;
-    this.t = Math.min(1, this.t + dt / total);
-    const s = this.t * total;
-    this.charge = s < CHARGE_TIME ? s / CHARGE_TIME : 0;
-    this.spread = s < CHARGE_TIME ? 0 : (s - CHARGE_TIME) / SWEEP_TIME;
-    const k = this.spread * this.spread * (3 - 2 * this.spread);
-    this.shared.uSweep.value = this.spread > 0 ? -0.08 + (REACH + 0.2) * k : -99;
-    this.shared.uSwOn.value = this.spread > 0 ? 1 : 0;
+    this.t = Math.min(1, this.t + dt / SWEEP_TIME);
+    this.spread = this.t;
+    this.shared.uSweep.value = START + (REACH - START) * this.t; // steady pace, so it never rushes
+    this.shared.uSwOn.value = 1;
     if (this.t >= 1) this.finish();
   }
 }
