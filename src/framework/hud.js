@@ -26,6 +26,7 @@ export class Hud {
       </div>
       <nav class="sections"></nav>
       <aside class="cards"></aside>
+      <svg class="wires"></svg>
       <div class="labels"></div>
       <div class="hover"></div>
       <div class="caption"><div class="cap-main">${cfg.banner}</div><div class="cap-sub"></div></div>
@@ -38,6 +39,7 @@ export class Hud {
     this.prog = q('.prog i');
     this.capSub = q('.cap-sub');
     this.labels = q('.labels');
+    this.wires = q('.wires');
     this.hover = q('.hover');
     this.partcard = q('.partcard');
     this.pool = [];
@@ -180,24 +182,37 @@ export class Hud {
     this.partcard.classList.add('on');
   }
 
-  // Floating labels. `items` is [{ text, x, y, sub }], already in screen pixels.
+  // Labels wired to their parts. `items` is [{ text, ax, ay (the point on the part), lx, ly
+  // (where the name sits), dir (-1 name on the left, 1 on the right), sub, alpha }], in screen pixels.
   drawLabels(items) {
+    const NS = 'http://www.w3.org/2000/svg';
     while (this.pool.length < items.length) {
       const d = el('div');
       this.labels.append(d);
-      this.pool.push(d);
+      const line = document.createElementNS(NS, 'path');
+      const dot = document.createElementNS(NS, 'circle');
+      dot.setAttribute('r', 3);
+      this.wires.append(line, dot);
+      this.pool.push({ d, line, dot });
     }
-    this.pool.forEach((d, i) => {
+    this.pool.forEach(({ d, line, dot }, i) => {
       const it = items[i];
-      if (!it) {
-        if (d.style.display !== 'none') d.style.display = 'none';
-        return;
-      }
+      const show = it ? '' : 'none';
+      if (d.style.display !== show) d.style.display = line.style.display = dot.style.display = show;
+      if (!it) return;
       if (d._t !== it.text) d.textContent = d._t = it.text;
-      d.className = it.sub ? 'sub' : '';
-      d.style.display = '';
-      d.style.transform = `translate(${it.x.toFixed(1)}px, ${it.y.toFixed(1)}px) translate(12px, -50%)`;
-      d.style.opacity = it.alpha == null ? 1 : it.alpha;
+      const cls = (it.sub ? 'sub ' : '') + (it.dir < 0 ? 'left' : 'right');
+      if (d.className !== cls) {
+        d.className = cls;
+        line.setAttribute('class', it.sub ? 'sub' : '');
+        dot.setAttribute('class', it.sub ? 'sub' : '');
+      }
+      d.style.transform = `translate(${it.lx.toFixed(1)}px, ${it.ly.toFixed(1)}px) translate(${it.dir < 0 ? '-100%' : '0'}, -50%)`;
+      d.style.opacity = line.style.opacity = dot.style.opacity = it.alpha;
+      const elbow = it.lx - it.dir * 14;
+      line.setAttribute('d', `M${it.ax.toFixed(1)} ${it.ay.toFixed(1)}L${elbow.toFixed(1)} ${it.ly.toFixed(1)}L${it.lx.toFixed(1)} ${it.ly.toFixed(1)}`);
+      dot.setAttribute('cx', it.ax.toFixed(1));
+      dot.setAttribute('cy', it.ay.toFixed(1));
     });
   }
 

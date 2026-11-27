@@ -9,14 +9,15 @@ export const ROLES = {
   trim: { rough: 0.3, metal: 1, env: 1.3 },
   mark: { rough: 0.45, metal: 0.3 },
   visor: { rough: 0.12, metal: 0.9, color: '#04070b' },
-  glow: { glow: 2.1 },
-  core: { glow: 3.4 },
+  glow: { glow: 1.5 },
+  edge: { glow: 0.55 }, // the thin line on each wing blade: a hint, not a neon tube,
+  core: { glow: 2.6 },
   thrust: { glow: 0.6 },
 };
 
 // Colour lines. Obsidian is the locked design; the others are the same robot repainted.
 const line = (id, name, armor, armor2, frame, trim, glow, mark) => ({
-  id, name, swatch: [armor, glow], roles: { armor, armor2, frame, trim, glow, core: glow, thrust: glow, mark },
+  id, name, swatch: [armor, glow], roles: { armor, armor2, frame, trim, glow, edge: glow, core: glow, thrust: glow, mark },
 });
 export const LINES = [
   line('obsidian', 'Obsidian', '#101114', '#262a31', '#08090b', '#b98342', '#3fe0ff', '#e0262e'),

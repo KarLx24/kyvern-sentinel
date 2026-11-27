@@ -257,16 +257,62 @@ canvas.addEventListener('dblclick', () => stage.home());
 const tmp = new THREE.Vector3();
 const box = new THREE.Box3();
 const scr = { x: 0, y: 0, visible: false };
+// Each label is tied to its part: a dot sits on the part's own metal and a leader line runs
+// out to the name. Names are pushed apart so two never sit on top of each other.
+const meshCache = new Map();
+function anchor(key, objects, out) {
+  let list = meshCache.get(key);
+  if (!list) {
+    list = [];
+    for (const o of objects) o.traverse((m) => m.isMesh && list.push(m));
+    for (const m of list) if (!m.geometry.boundingSphere) m.geometry.computeBoundingSphere();
+    meshCache.set(key, list);
+  }
+  box.makeEmpty();
+  for (const o of objects) box.expandByObject(o);
+  box.getCenter(out);
+  // the centre of a part can be empty air (a ring, a fan of blades): snap to its nearest piece of metal
+  let best = Infinity;
+  for (const m of list) {
+    const c = tmp2.copy(m.geometry.boundingSphere.center).applyMatrix4(m.matrixWorld);
+    const d = c.distanceToSquared(out);
+    if (d < best) {
+      best = d;
+      tmp3.copy(c);
+    }
+  }
+  return list.length ? out.copy(tmp3) : out;
+}
+const tmp2 = new THREE.Vector3();
+const tmp3 = new THREE.Vector3();
 function labels() {
   const out = [];
   const push = (text, v, sub, alpha) => {
     stage.project(v, scr);
-    if (scr.visible && alpha > 0.05) out.push({ text, x: scr.x, y: scr.y, sub, alpha });
+    if (scr.visible && alpha > 0.05) out.push({ text, ax: scr.x, ay: scr.y, sub, alpha });
   };
   for (const p of rig.parts.values()) {
     if (p.sub > 0.05) {
-      for (const s of p.subs) push(s.name, box.setFromObject(s.object).getCenter(tmp), true, Math.min(1, p.sub * 1.4));
-    } else if (p.sep > 0.25 && p.sepTarget > 0) push(p.label, p.worldCentre(tmp), false, Math.min(1, (p.sep - 0.25) * 2));
+      for (const s of p.subs) push(s.name, anchor(s, [s.object], tmp), true, Math.min(1, p.sub * 1.4));
+    } else if (p.sep > 0.25 && p.sepTarget > 0) push(p.label, anchor(p, p.subs.map((s) => s.object), tmp), false, Math.min(1, (p.sep - 0.25) * 2));
+  }
+  if (out.length) {
+    // names go out to the side their part is on, then spread down so they do not collide
+    const mid = out.reduce((s, it) => s + it.ax, 0) / out.length;
+    const reach = out.length > 8 ? 64 : 48;
+    for (const dir of [-1, 1]) {
+      const side = out.filter((it) => (it.ax >= mid ? 1 : -1) === dir).sort((a, b) => a.ay - b.ay);
+      let last = -Infinity;
+      for (const it of side) {
+        it.dir = dir;
+        it.lx = it.ax + dir * reach;
+        it.ly = Math.max(it.ay, last + 21);
+        last = it.ly;
+      }
+      // if the stack ran long, slide it back up so it stays centred on its parts
+      const over = side.reduce((s, it) => s + (it.ly - it.ay), 0) / (side.length || 1);
+      for (const it of side) it.ly -= over / 2;
+    }
   }
   hud.drawLabels(out);
 }

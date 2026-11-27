@@ -21,7 +21,7 @@ const BLADES = 9;
 const WRIST = [0.84, 0.58, -0.1];
 
 export function buildSentinel(rig, m) {
-  const { armor: A, armor2: A2, frame: F, trim: T, glow: G, mark: R, core: CORE, thrust: TH, visor: V } = m;
+  const { armor: A, armor2: A2, frame: F, trim: T, glow: G, mark: R, core: CORE, thrust: TH, visor: V, edge: E } = m;
   for (const s of SECTIONS) rig.section(s);
   const handles = { feathers: [], orbit: [], reactor: null };
 
@@ -45,7 +45,7 @@ export function buildSentinel(rig, m) {
   abdomen.add('Spine column', group([mesh(disc(0.11, 0.44), F, [0, 0.21, 0]), mesh(ring(0.115, 0.012, 'y'), T, [0, 0.12, 0]), mesh(ring(0.115, 0.012, 'y'), T, [0, 0.3, 0])]));
   const ab = (w) => [[-w, 0.058], [w, 0.058], [w + 0.025, 0], [w - 0.03, -0.058], [-w + 0.03, -0.058], [-w - 0.025, 0]];
   [['Upper ab plate', 0.18, 0.34, A], ['Mid ab plate', 0.155, 0.215, A2], ['Lower ab plate', 0.13, 0.09, A]].forEach(([name, w, y, mat], i) => {
-    const g = group([mesh(plate(ab(w), 0.12, 0.018), mat), seam([-w * 0.5, -0.064], [w * 0.5, -0.064], 0.055, 0.008)], [0, y, 0.15], [-4, 0, 0]);
+    const g = group([mesh(plate(ab(w), 0.12, 0.018), mat)], [0, y, 0.15], [-4, 0, 0]);
     abdomen.add(name, g, [0, 0, 0.35 + i * 0.16]);
   });
   for (const s of [1, -1]) {
@@ -60,15 +60,13 @@ export function buildSentinel(rig, m) {
   for (const s of [1, -1]) {
     const g = group([
       mesh(plate(pec, 0.15, 0.025), A),
-      seam([0.2, 0.1], [0.27, 0.3], 0.077),
-      seam([0.27, 0.3], [0.17, 0.5], 0.077),
       marker([0.52, 0.56, 0.078], 0.08, 0.024, [0, 0, -40]),
     ], [0, 0, 0.22], [-7, 12, 0]);
     const side = group([g]);
     side.scale.x = s;
     chest.add(`Pectoral ${s > 0 ? 'L' : 'R'}`, side, [s * 0.38, 0.1, 0.5]);
   }
-  chest.add('Sternum', group([mesh(plate([[-0.075, 0.72], [0.075, 0.72], [0.05, 0.55], [-0.05, 0.55]], 0.16, 0.02), A2), mesh(box(0.03, 0.1, 0.012, 0.004), G, [0, 0.635, 0.082])], [0, 0, 0.23], [-7, 0, 0]), [0, 0.3, 0.55]);
+  chest.add('Sternum', group([mesh(plate([[-0.075, 0.72], [0.075, 0.72], [0.05, 0.55], [-0.05, 0.55]], 0.16, 0.02), A2)], [0, 0, 0.23], [-7, 0, 0]), [0, 0.3, 0.55]);
   for (const s of [1, -1]) {
     chest.add(`Collar ${s > 0 ? 'L' : 'R'}`, mesh(box(0.24, 0.1, 0.3, 0.03), A2, [s * 0.22, 0.73, -0.02], [0, 0, s * -18]), [s * 0.2, 0.4, 0]);
     chest.add(`Side intake ${s > 0 ? 'L' : 'R'}`, group([mesh(box(0.12, 0.3, 0.3, 0.03), A2), marker([s * 0.062, 0.05, 0.06], 0.012, 0.03, [0, 90, 0])], [s * 0.36, 0.18, 0], [0, 0, s * 12]), [s * 0.42, -0.1, 0]);
@@ -122,8 +120,6 @@ export function buildSentinel(rig, m) {
     shoulder.add('Shoulder joint', group([mesh(new THREE.SphereGeometry(0.13, 24, 16), F), mesh(disc(0.14, 0.06, 'x'), T, [-0.09, 0, 0])]));
     shoulder.add('Pauldron', group([
       mesh(plate([[-0.2, 0.04], [-0.14, 0.27], [0.3, 0.3], [0.47, 0.1], [0.43, -0.13], [-0.06, -0.17]], 0.46, 0.035), A),
-      seam([-0.02, -0.19], [0.4, -0.165], 0.22),
-      seam([-0.02, -0.19], [0.4, -0.165], -0.22),
       marker([0.27, 0.06, 0.232], 0.1, 0.03, [0, 0, -8]),
     ]), [0.4, 0.3, 0]);
     shoulder.add('Pauldron liner', mesh(box(0.36, 0.07, 0.36, 0.02), A2, [0.2, -0.16, 0], [0, 0, 4]), [0.2, -0.2, 0]);
@@ -139,7 +135,7 @@ export function buildSentinel(rig, m) {
     fore.add('Elbow joint', group([mesh(disc(0.11, 0.25, 'x'), T), mesh(disc(0.065, 0.29, 'x'), F), mesh(disc(0.03, 0.31, 'x', 6), T)]), [0, 0.08, -0.25]);
     fore.add('Radius frame', mesh(disc(0.06, 0.5), F, [0, -0.33, 0]));
     const gaunt = [{ y: -0.12, w: 0.13, d: 0.24, c: 0.05 }, { y: -0.36, w: 0.17, d: 0.33, c: 0.06 }, { y: -0.6, w: 0.14, d: 0.27, c: 0.05 }];
-    fore.add('Gauntlet outer', group([mesh(halfLoft(gaunt, 0.066), A), mesh(box(0.012, 0.26, 0.016, 0.004), G, [0.153, -0.36, 0.06], [0, 0, 2]), marker([0.152, -0.2, -0.04], 0.012, 0.03, [0, 90, 0])]), [0.32, 0, 0]);
+    fore.add('Gauntlet outer', group([mesh(halfLoft(gaunt, 0.066), A), marker([0.152, -0.2, -0.04], 0.012, 0.03, [0, 90, 0])]), [0.32, 0, 0]);
     fore.add('Gauntlet inner', mesh(halfLoft(gaunt, -0.066), A2), [-0.28, 0, 0]);
     fore.add('Gauntlet fin', mesh(plate([[0, 0.14], [0.1, 0.04], [0.08, -0.16], [0, -0.14]], 0.05, 0.012), A, [0, -0.36, -0.15], [0, 90, 0]), [0, 0, -0.3]);
 
@@ -155,7 +151,7 @@ export function buildSentinel(rig, m) {
     thigh.add('Hip joint', group([mesh(disc(0.16, 0.13, 'x', 36), T), mesh(disc(0.1, 0.2, 'x'), F), mesh(disc(0.045, 0.23, 'x', 6), T)], [0.03, 0, 0]), [0.32, 0.1, 0]);
     thigh.add('Femur', mesh(disc(0.08, 0.7), F, [0, -0.43, 0]));
     const th = (z, k) => [{ y: -0.12, w: 0.3 * k, d: 0.17, c: 0.06, z }, { y: -0.42, w: 0.35 * k, d: 0.21, c: 0.07, z: z * 1.1 }, { y: -0.77, w: 0.25 * k, d: 0.15, c: 0.05, z: z * 0.85 }];
-    thigh.add('Thigh shell, front', group([mesh(loft(th(0.09, 1)), A), marker([0.05, -0.22, 0.186], 0.1, 0.03, [0, 0, -10]), seam([0.115, -0.3], [0.1, -0.62], 0.2, 0.012)]), [0, 0, 0.4]);
+    thigh.add('Thigh shell, front', group([mesh(loft(th(0.09, 1)), A), marker([0.05, -0.22, 0.186], 0.1, 0.03, [0, 0, -10])]), [0, 0, 0.4]);
     thigh.add('Thigh shell, rear', mesh(loft(th(-0.09, 0.94)), A2), [0, 0, -0.4]);
     thigh.add('Thigh actuator', group([mesh(disc(0.024, 0.44), T), mesh(disc(0.038, 0.2), F, [0, 0.1, 0])], [0.19, -0.42, -0.02], [0, 0, -3]), [0.3, 0, 0]);
 
@@ -199,7 +195,7 @@ export function buildSentinel(rig, m) {
       const blade = group([
         mesh(plate([[0, -w * 0.5], [L * 0.3, -w], [L * 0.82, -w * 0.8], [L, 0.01], [L * 0.8, w * 0.42], [0, w * 0.5]], 0.03, 0.008), i % 2 ? A2 : A),
         mesh(plate([[0.04, -w * 0.7], [L * 0.3, -w * 1.15], [L * 0.36, -w * 0.3], [0.06, w * 0.6]], 0.024, 0.006), i % 2 ? A : A2, [0, 0, 0.022]),
-        beam([L * 0.34, -w * 1.02, 0], [L * 0.82, -w * 0.86, 0], 0.011, 0.034, G),
+        beam([L * 0.34, -w * 1.02, 0], [L * 0.82, -w * 0.86, 0], 0.008, 0.033, E),
       ], [0, 0, -0.03 - i * 0.022]);
       const a = ((24 - k * 106) * Math.PI) / 180;
       blades.add(`Blade ${i + 1}`, blade, [Math.cos(a) * 0.5, Math.sin(a) * 0.5, -i * 0.03]);

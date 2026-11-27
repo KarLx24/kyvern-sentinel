@@ -19,7 +19,7 @@ body { color: var(--fg); font: 13px/1.4 var(--sans); -webkit-font-smoothing: ant
 #gl:active { cursor: grabbing; }
 #hud { position: fixed; inset: 0; pointer-events: none; }
 #hud button, #hud a { pointer-events: auto; }
-body.bare #hud > :not(.labels):not(.hover) { display: none; }
+body.bare #hud > :not(.labels):not(.wires):not(.hover) { display: none; }
 .fallback { position: fixed; inset: auto 0 45% 0; text-align: center; color: var(--dim); }
 a { color: inherit; }
 
@@ -54,7 +54,7 @@ h1 { margin: 4px 0 2px; font: 600 clamp(22px, 3.2vw, 34px) var(--sans); letter-s
 .sw { width: 13px; height: 13px; background: linear-gradient(135deg, var(--a) 0 55%, var(--b) 55% 100%); border: 1px solid rgba(255, 255, 255, 0.35); transform: rotate(45deg) scale(0.8); }
 
 /* sections, left */
-.sections { position: absolute; left: 22px; top: 50%; transform: translateY(-52%); display: flex; flex-direction: column; border-left: 1px solid var(--line); }
+.sections { position: absolute; left: 22px; top: 44%; transform: translateY(-58%); display: flex; flex-direction: column; border-left: 1px solid var(--line); }
 .sec { all: unset; pointer-events: auto; cursor: pointer; padding: 6px 14px; margin-left: -1px; border-left: 2px solid transparent; color: var(--mute); font: 600 11px var(--mono); letter-spacing: 0.16em; text-transform: uppercase; transition: color 0.15s; }
 .sec:hover { color: var(--fg); }
 .sec small { display: none; font: 10px var(--mono); letter-spacing: 0.06em; text-transform: none; color: var(--dim); margin-top: 3px; }
@@ -74,9 +74,15 @@ h1 { margin: 4px 0 2px; font: 600 clamp(22px, 3.2vw, 34px) var(--sans); letter-s
 .bars i { flex: 1; background: var(--accent); opacity: 0.85; transition: height 0.25s; }
 .card canvas { width: 100%; height: 26px; display: block; }
 
-/* labels on the model */
-.labels div { position: absolute; left: 0; top: 0; white-space: nowrap; font: 600 10px var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--fg); padding: 3px 7px; background: rgba(5, 9, 15, 0.72); border-left: 2px solid var(--accent); will-change: transform; }
-.labels div.sub { color: #ffd9a8; border-left-color: var(--bronze); letter-spacing: 0.08em; }
+/* labels on the model: a dot on the part, a leader line, then the name */
+.wires { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.wires path { fill: none; stroke: var(--accent); stroke-width: 1.2; stroke-linejoin: round; filter: drop-shadow(0 0 2px #000); }
+.wires circle { fill: var(--bg); stroke: var(--accent); stroke-width: 1.6; }
+.wires path.sub, .wires circle.sub { stroke: var(--bronze); }
+.labels div { position: absolute; left: 0; top: 0; white-space: nowrap; font: 600 10px var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--fg); padding: 3px 7px; background: rgba(5, 9, 15, 0.86); border: 0 solid var(--accent); will-change: transform; }
+.labels div.right { border-left-width: 2px; }
+.labels div.left { border-right-width: 2px; }
+.labels div.sub { color: #ffd9a8; border-color: var(--bronze); letter-spacing: 0.08em; }
 .hover { position: absolute; left: 0; top: 0; opacity: 0; transition: opacity 0.12s; font: 600 10px var(--mono); letter-spacing: 0.16em; text-transform: uppercase; padding: 5px 9px; background: var(--accent); color: #031018; white-space: nowrap; }
 
 /* words under the robot */

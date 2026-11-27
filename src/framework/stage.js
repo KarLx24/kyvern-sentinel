@@ -72,7 +72,7 @@ export class Stage {
 
     this.composer = new EffectComposer(renderer);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
-    this.bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.3, 0.5, 1.2);
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.16, 0.45, 1.35);
     this.composer.addPass(this.bloom);
     this.composer.addPass(new OutputPass());
 
@@ -100,9 +100,9 @@ export class Stage {
     this.key = key;
     this.keyOffset = key.position.clone();
     this.scene.add(key, key.target);
-    const cool = new THREE.DirectionalLight(t.rimCool, 2.4);
+    const cool = new THREE.DirectionalLight(t.rimCool, 1.4);
     cool.position.set(-7, 5, -8);
-    const warm = new THREE.DirectionalLight(t.rimWarm, 1.3);
+    const warm = new THREE.DirectionalLight(t.rimWarm, 0.9);
     warm.position.set(8, 3.5, -6);
     const fill = new THREE.DirectionalLight('#7fa8ff', 0.7);
     fill.position.set(-6, 2, 6);
@@ -122,7 +122,7 @@ export class Stage {
       env.add(m);
     };
     panel(9, 5, '#ffffff', 7, [0, 9.5, 2]);
-    panel(3, 9, t.rimCool, 9, [-11, 4, -4]);
+    panel(3, 9, t.rimCool, 5, [-11, 4, -4]);
     panel(3, 9, t.rimWarm, 7, [11, 4, -5]);
     panel(12, 4, '#8db4ff', 2.2, [0, 3, 13]);
     panel(1.2, 8, '#ffffff', 6, [-7, 4, 9]);
@@ -180,7 +180,7 @@ export class Stage {
     seams.colorSpace = THREE.SRGBColorSpace;
     const deck = new THREE.Mesh(
       new THREE.CircleGeometry(120, 72),
-      new THREE.MeshStandardMaterial({ color: t.floor, roughness: 0.92, metalness: 0.1, envMapIntensity: 0.25, emissive: '#ffffff', emissiveMap: seams, emissiveIntensity: 0.22 }),
+      new THREE.MeshStandardMaterial({ color: t.floor, roughness: 0.92, metalness: 0.1, envMapIntensity: 0.25, emissive: '#ffffff', emissiveMap: seams, emissiveIntensity: 0.12 }),
     );
     deck.rotation.x = -Math.PI / 2;
     deck.receiveShadow = true;
@@ -189,7 +189,7 @@ export class Stage {
 
     // the pad the robot stands on
     const pad = new THREE.Group();
-    const ringMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(t.grid), transparent: true, opacity: 0.7, depthWrite: false });
+    const ringMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(t.grid), transparent: true, opacity: 0.38, depthWrite: false });
     const ring = (r0, r1, a0 = 0, len = Math.PI * 2) => {
       const m = new THREE.Mesh(new THREE.RingGeometry(r0, r1, 96, 1, a0, len), ringMat);
       m.rotation.x = -Math.PI / 2;
@@ -232,7 +232,7 @@ export class Stage {
     const win = new THREE.CanvasTexture(cv);
     win.colorSpace = THREE.SRGBColorSpace;
     win.magFilter = THREE.NearestFilter;
-    const towerMat = new THREE.MeshStandardMaterial({ color: '#0c121c', roughness: 0.5, metalness: 0.6, emissive: '#ffffff', emissiveMap: win, emissiveIntensity: 0.7 });
+    const towerMat = new THREE.MeshStandardMaterial({ color: '#0c121c', roughness: 0.5, metalness: 0.6, emissive: '#ffffff', emissiveMap: win, emissiveIntensity: 0.4 });
     const count = 150;
     const towers = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0), towerMat, count);
     const m = new THREE.Matrix4();
@@ -251,8 +251,8 @@ export class Stage {
 
     const pylons = new THREE.Group();
     const steel = new THREE.MeshStandardMaterial({ color: '#151c27', roughness: 0.45, metalness: 0.8 });
-    const lampCool = new THREE.MeshBasicMaterial({ color: new THREE.Color(t.rimCool).multiplyScalar(1.25) });
-    const lampWarm = new THREE.MeshBasicMaterial({ color: new THREE.Color(t.rimWarm).multiplyScalar(1.25) });
+    const lampCool = new THREE.MeshBasicMaterial({ color: new THREE.Color(t.rimCool).multiplyScalar(0.7) });
+    const lampWarm = new THREE.MeshBasicMaterial({ color: new THREE.Color(t.rimWarm).multiplyScalar(0.7) });
     for (let i = 0; i < 10; i++) {
       const a = (i / 10) * Math.PI * 2 + 0.31;
       if (Math.sin(a) > -0.2 || Math.abs(Math.cos(a)) < 0.3) continue; // keep the camera side clear
@@ -272,7 +272,7 @@ export class Stage {
   }
 
   motes() {
-    const n = 260;
+    const n = 110;
     const pos = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) {
       const a = Math.random() * Math.PI * 2;
@@ -285,7 +285,7 @@ export class Stage {
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     const pts = new THREE.Points(
       geo,
-      new THREE.PointsMaterial({ color: new THREE.Color(this.theme.grid).multiplyScalar(1.4), size: 0.035, transparent: true, opacity: 0.7, depthWrite: false, blending: THREE.AdditiveBlending }),
+      new THREE.PointsMaterial({ color: new THREE.Color(this.theme.grid).multiplyScalar(1.4), size: 0.03, transparent: true, opacity: 0.4, depthWrite: false, blending: THREE.AdditiveBlending }),
     );
     this.dust = pts;
     this.scene.add(pts);
