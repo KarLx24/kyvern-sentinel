@@ -8,7 +8,10 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 const damp = (cur, target, rate, dt) => cur + (target - cur) * (1 - Math.exp(-rate * dt));
 
+// `backdrop: 'studio'` is a plain dark room with nothing behind the robot; 'city' adds towers and pylons.
+const STUDIO = { zenith: '#0c0d10', horizon: '#2b2d33', haze: '#1c1e22', floor: '#191a1e' };
 const DEFAULT_THEME = {
+  backdrop: 'studio',
   zenith: '#04060c',
   horizon: '#1b3a66',
   haze: '#0d1a2e',
@@ -23,6 +26,8 @@ const DEFAULT_THEME = {
 export class Stage {
   constructor(canvas, opts = {}) {
     this.theme = { ...DEFAULT_THEME, ...(opts.theme || {}) };
+    this.studio = this.theme.backdrop !== 'city';
+    if (this.studio) Object.assign(this.theme, STUDIO, opts.theme || {});
     this.canvas = canvas;
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
     renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -34,7 +39,7 @@ export class Stage {
     this.pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
 
     this.scene = new THREE.Scene();
-    this.scene.fog = new THREE.FogExp2(this.theme.haze, 0.011);
+    this.scene.fog = new THREE.FogExp2(this.theme.haze, this.studio ? 0.03 : 0.011);
 
     this.camera = new THREE.PerspectiveCamera(30, 1, 0.1, 400);
     this.focus = new THREE.Vector3(0, 1.95, 0);
@@ -144,7 +149,7 @@ export class Stage {
         fragmentShader: `varying vec3 vP; uniform vec3 zenith, horizon, warm;
           void main(){ vec3 d = normalize(vP); float h = clamp(d.y, 0.0, 1.0);
             vec3 c = mix(horizon, zenith, pow(h, 0.42));
-            c += warm * 0.16 * exp(-h * 9.0) * (0.5 + 0.5 * d.x);
+            c += warm * ${this.studio ? '0.0' : '0.16'} * exp(-h * 9.0) * (0.5 + 0.5 * d.x);
             gl_FragColor = vec4(c, 1.0); }`,
       }),
     );
@@ -180,7 +185,7 @@ export class Stage {
     seams.colorSpace = THREE.SRGBColorSpace;
     const deck = new THREE.Mesh(
       new THREE.CircleGeometry(120, 72),
-      new THREE.MeshStandardMaterial({ color: t.floor, roughness: 0.92, metalness: 0.1, envMapIntensity: 0.25, emissive: '#ffffff', emissiveMap: seams, emissiveIntensity: 0.12 }),
+      new THREE.MeshStandardMaterial({ color: t.floor, roughness: 0.92, metalness: 0.1, envMapIntensity: 0.25, emissive: '#ffffff', emissiveMap: seams, emissiveIntensity: this.studio ? 0 : 0.12 }),
     );
     deck.rotation.x = -Math.PI / 2;
     deck.receiveShadow = true;
@@ -189,7 +194,7 @@ export class Stage {
 
     // the pad the robot stands on
     const pad = new THREE.Group();
-    const ringMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(t.grid), transparent: true, opacity: 0.38, depthWrite: false });
+    const ringMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(t.grid), transparent: true, opacity: this.studio ? 0.2 : 0.38, depthWrite: false });
     const ring = (r0, r1, a0 = 0, len = Math.PI * 2) => {
       const m = new THREE.Mesh(new THREE.RingGeometry(r0, r1, 96, 1, a0, len), ringMat);
       m.rotation.x = -Math.PI / 2;
@@ -212,6 +217,7 @@ export class Stage {
 
   // A city of our own behind the pad: towers with lit windows, and a ring of pylons up close.
   backdrop() {
+    if (this.studio) return;
     const t = this.theme;
     const cv = document.createElement('canvas');
     cv.width = 128;
@@ -287,6 +293,7 @@ export class Stage {
       geo,
       new THREE.PointsMaterial({ color: new THREE.Color(this.theme.grid).multiplyScalar(1.4), size: 0.03, transparent: true, opacity: 0.4, depthWrite: false, blending: THREE.AdditiveBlending }),
     );
+    pts.visible = !this.studio;
     this.dust = pts;
     this.scene.add(pts);
   }

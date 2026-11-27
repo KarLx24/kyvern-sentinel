@@ -15,7 +15,6 @@ export class Hud {
     root.innerHTML = `
       <header class="top">
         <a class="brand" href="./portrait/" title="Open the portrait render"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 5l4 6-4 16-4-16z"/><path d="M11 12L2 8l3 10 7 3zM21 12l9-4-3 10-7 3z"/></svg><b>KYVERN</b></a>
-        <div class="live"><i></i>LIVE SIM</div>
       </header>
       <div class="head">
         <div class="eyebrow">${cfg.code}</div>
@@ -33,7 +32,8 @@ export class Hud {
       <aside class="partcard"></aside>
       <div class="pad"><button data-pad="fwd:1" aria-label="Forward">▲</button><button data-pad="turn:1" aria-label="Turn left">◀</button><button data-pad="fwd:-1" aria-label="Back">▼</button><button data-pad="turn:-1" aria-label="Turn right">▶</button></div>
       <footer class="dock"></footer>
-      <div class="credit">${cfg.credit}</div>`;
+      <div class="credit">${cfg.credit}</div>
+      <div class="hint">Drag to turn · scroll to zoom · click a part · WASD to walk</div>`;
     const q = (s) => root.querySelector(s);
     this.formline = q('.formline');
     this.prog = q('.prog i');
@@ -104,7 +104,7 @@ export class Hud {
     this.zoomLabel = el('span', 'read', 'Zoom 100%');
     gView.append(this.zoomLabel, this.chip('+', () => on.zoom(1), 'sq'));
     this.speedChip = this.chip('Speed 1×', () => on.speed());
-    gView.append(this.speedChip, el('span', 'hint', 'WASD to walk · drag to turn · click a part'));
+    gView.append(this.speedChip);
 
     // touch pad
     for (const b of root.querySelectorAll('[data-pad]')) {

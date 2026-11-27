@@ -18,7 +18,7 @@ const pick = (key, table, fallback) => (table[query.get(key)] ? query.get(key) :
 const SPEEDS = [1, 0.5, 0.25, 2];
 
 const canvas = document.getElementById('gl');
-const stage = new Stage(canvas);
+const stage = new Stage(canvas, { theme: { backdrop: new URLSearchParams(location.search).get('scene') === 'city' ? 'city' : 'studio' } });
 const rig = new Rig();
 const firstLine = LINES.some((l) => l.id === query.get('line')) ? query.get('line') : LINES[0].id;
 const paint = new Paint(ROLES, LINES, firstLine);
