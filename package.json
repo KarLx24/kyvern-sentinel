@@ -1,0 +1,10 @@
+{
+  "name": "kyvern-sentinel",
+  "private": true,
+  "type": "module",
+  "description": "Kyvern Sentinel SN-01: a working 3D robot model with a parts framework. No build step.",
+  "scripts": {
+    "start": "python3 -m http.server 8080",
+    "test": "node --import ./tests/register.mjs --test tests/*.test.mjs"
+  }
+}
