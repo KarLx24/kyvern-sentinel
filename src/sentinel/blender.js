@@ -106,7 +106,7 @@ export function buildFromBlender(rig, mats, gltf) {
     for (const [name, g] of groups) {
       const dir = part.body.worldToLocal(centre(g, new THREE.Vector3())).sub(mid);
       const len = dir.length();
-      part.add(name, g, len > 0.03 ? dir.multiplyScalar((0.22 + Math.min(0.2, len)) / len) : [0, 0, 0]);
+      part.add(name, g, len > 0.03 ? dir.multiplyScalar((0.42 + Math.min(0.3, len)) / len) : [0, 0, 0]);
     }
   };
   const meshesOf = (node) => node.children.filter((o) => o.isMesh);

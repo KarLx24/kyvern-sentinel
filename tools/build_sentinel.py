@@ -317,7 +317,7 @@ def bolts(parent, pts, y, r=0.012, mat=None):
         cyl('Bolt', r, 0.012, mat or F, parent, (x, y, z), 'y', seg=6, bevel=0.002)
 
 
-def stretch(emp, fz, fxy=1.0, keep=('drum', 'inner', 'hub', 'bolt', 'Bolt', 'rim', 'Marker', 'light', 'Knee cap')):
+def stretch(emp, fz, fxy=1.0, keep=('drum', 'inner', 'hub', 'bolt', 'Bolt', 'rim', 'Marker', 'light', 'Knee cap', 'Gear')):
     """Lengthen (fz) and slim (fxy) every piece hung on a joint, measured in the joint's own space.
     Joint drums, bolts and markers keep their shape and only move."""
     for ob in emp.children:
@@ -338,6 +338,27 @@ def stretch(emp, fz, fxy=1.0, keep=('drum', 'inner', 'hub', 'bolt', 'Bolt', 'rim
             v.co = inv @ q
 
 
+def gear(name, r, teeth, depth, mat, parent, loc, axis='x'):
+    """Toothed wheel. Its flat face sits at `loc` and it grows along +axis (x) or toward the viewer (y)."""
+    pts = []
+    for i in range(teeth * 4):
+        a = 2 * math.pi * i / (teeth * 4)
+        rr = r if i % 4 < 2 else r * 0.82
+        pts.append((rr * math.cos(a), rr * math.sin(a)))
+    return plate(name, pts, depth, mat, parent, loc, (0, 0, 90) if axis == 'x' else (0, 0, 0), bevel=0.003)
+
+
+def hose(name, parent, pts, r=0.016, mat=None):
+    """Cable or hydraulic line through 3D points."""
+    for a, b in zip(pts, pts[1:]):
+        beam(name, a, b, r * 2, r * 2, mat or F, parent, bevel=r * 0.6)
+
+
+def vents(name, parent, loc, n, size, step, mat=None, rot=(0, 0, 0)):
+    for k in range(n):
+        box(name, size, mat or F, parent, (loc[0] + step[0] * k, loc[1] + step[1] * k, loc[2] + step[2] * k), rot, bevel=0.003)
+
+
 def mx(pts, s):
     return [(x * s, z) for x, z in pts]
 
@@ -356,8 +377,12 @@ plate('Codpiece', [(-0.13, 0.1), (0.13, 0.1), (0.17, -0.06), (0.08, -0.4), (-0.0
 plate('Codpiece rib', [(-0.05, 0.02), (0.05, 0.02), (0.035, -0.3), (-0.035, -0.3)], 0.03, A2, pelvis, (0, -0.285, -0.04), (6, 0, 0), inset=0.008, bevel=0.005)
 plate('Tail plate', [(-0.2, 0.14), (0.2, 0.14), (0.16, -0.02), (0.07, -0.26), (-0.07, -0.26), (-0.16, -0.02)], 0.1, A2, pelvis, (0, 0.28, 0), inset=0.02)
 cyl('Waist ring', 0.22, 0.06, T, pelvis, (0, 0.02, 0.17))
+gear('Waist gear', 0.25, 22, 0.03, F, pelvis, (0, 0.02, 0.13), 'y').rotation_euler = (R(90), 0, 0)
 for s in (1, -1):
     plate('Hip skirt', mx([(0.22, 0.16), (0.44, 0.1), (0.5, -0.1), (0.36, -0.2), (0.24, -0.06)], s), 0.09, A, pelvis, (0, -0.13, 0.02), (0, 0, 0), inset=0.02)
+    plate('Hip guard', mx([(0.3, 0.1), (0.56, 0.06), (0.6, -0.2), (0.5, -0.42), (0.36, -0.34), (0.3, -0.12)], s), 0.06, A, pelvis, (0, -0.21, 0.0), (4, s * 14, 0), inset=0.02, bevel=0.01)
+    plate('Hip guard panel', mx([(0.36, 0.02), (0.52, 0.0), (0.54, -0.18), (0.47, -0.3), (0.38, -0.24)], s), 0.02, A2, pelvis, (0, -0.268, 0.0), (4, s * 14, 0), inset=0.008, bevel=0.004)
+    hose('Hip hose', pelvis, [(s * 0.24, 0.16, 0.14), (s * 0.34, 0.2, 0.0), (s * 0.3, 0.16, -0.12)], 0.018)
     cyl('Belt piston', 0.022, 0.2, T, pelvis, (s * 0.17, -0.1, 0.2), 'z', rot=(0, s * 14, 0), seg=16, bevel=0.003)
 
 # ---- abdomen -------------------------------------------------------------------------------
@@ -374,6 +399,8 @@ for s in (1, -1):
     for k, z in enumerate((0.1, 0.27, 0.44, 0.6)):
         box('Flank rib', (0.05, 0.28, 0.09), A, abdomen, (s * (0.275 + k * 0.012), 0.02, z), (0, s * -10, 0), bevel=0.015)
     cyl('Waist piston', 0.024, 0.62, T, abdomen, (s * 0.15, -0.1, 0.33), 'z', rot=(0, s * -6, 0), seg=16, bevel=0.003)
+    hose('Ab hose', abdomen, [(s * 0.2, -0.13, 0.66), (s * 0.23, -0.17, 0.4), (s * 0.19, -0.14, 0.08)], 0.014)
+    hose('Ab hose', abdomen, [(s * 0.24, -0.08, 0.66), (s * 0.28, -0.11, 0.36), (s * 0.23, -0.08, 0.06)], 0.012)
     cyl('Waist piston sleeve', 0.036, 0.22, F, abdomen, (s * 0.142, -0.1, 0.16), 'z', rot=(0, s * -6, 0), seg=16, bevel=0.004)
 
 # ---- chest ---------------------------------------------------------------------------------
@@ -386,6 +413,12 @@ lower = [(0.03, -0.01), (0.19, -0.03), (0.37, 0.03), (0.34, -0.1), (0.14, -0.15)
 for s in (1, -1):
     plate('Pectoral', mx(pec, s * 1.22), 0.17, A, chest, (0, -0.16, 0), (-6, s * 9, 0), inset=0.04, bevel=0.014)
     plate('Pectoral panel', mx([(0.26, 0.6), (0.4, 0.62), (0.49, 0.54), (0.48, 0.34), (0.3, 0.34)], s * 1.22), 0.02, A2, chest, (s * 0.012, -0.323, 0.0), (-6, s * 9, 0), inset=0.008, bevel=0.004)
+    plate('Pectoral armour', mx([(0.08, 0.6), (0.3, 0.64), (0.26, 0.42), (0.1, 0.36)], s * 1.22), 0.03, A, chest, (s * 0.01, -0.325, 0.0), (-6, s * 9, 0), inset=0.01, bevel=0.005)
+    for k in range(3):
+        beam('Rib strut', (s * (0.12 + k * 0.09), -0.2, 0.0), (s * (0.2 + k * 0.1), -0.24, -0.12), 0.035, 0.03, F, chest, bevel=0.006)
+    vents('Intake', chest, (s * 0.6, -0.12, 0.42), 4, (0.03, 0.2, 0.03), (0, 0, -0.055), F, (0, s * 12, 0))
+    cyl('Thruster', 0.1, 0.16, F, chest, (s * 0.2, 0.5, 0.36), 'y', seg=32, r2=0.07)
+    cyl('Thruster ring', 0.11, 0.03, T, chest, (s * 0.2, 0.57, 0.36), 'y', seg=32)
     marker(chest, (s * 0.45, -0.325, 0.565), 0.09, 0.026, (-6, s * 9, s * -38))
     plate('Lower rib plate', mx(lower, s), 0.1, A2, chest, (0, -0.17, 0), (-4, s * 6, 0), inset=0.02)
     marker(chest, (s * 0.17, -0.275, -0.035), 0.085, 0.026, (-4, s * 6, s * 6))
@@ -427,6 +460,7 @@ plate('Chin', [(-0.07, 0.2), (0.07, 0.2), (0.05, 0.06), (-0.05, 0.06)], 0.04, A,
 box('Crest', (0.07, 0.34, 0.07), A, helm, (0, 0.0, 0.565), (-10, 0, 0), bevel=0.02)
 box('Crest light', (0.034, 0.012, 0.075), G, helm, (0, -0.203, 0.49), (-18, 0, 0), bevel=0)
 for s in (1, -1):
+    plate('Helm fin', [(0.0, 0.0), (0.04, 0.26), (0.0, 0.34), (-0.05, 0.05)], 0.02, A2, helm, (s * 0.2, 0.06, 0.3), (0, s * 12, s * 90), inset=0.005, bevel=0.004)
     cyl('Ear drum', 0.075, 0.05, F, helm, (s * 0.18, 0.04, 0.28), 'x', seg=32)
     cyl('Ear cap', 0.045, 0.07, T, helm, (s * 0.185, 0.04, 0.28), 'x', seg=24)
     box('Cheek guard', (0.035, 0.24, 0.2), A, helm, (s * 0.165, -0.06, 0.18), (0, s * -8, s * -14), bevel=0.012)
@@ -441,10 +475,13 @@ def build_side(tag, mirror):
     sh = empty('shoulder_' + tag, side_c, (0.78, 0.0, 0.47))
     sphere('Shoulder ball', 0.15, F, sh)
     cyl('Shoulder collar', 0.16, 0.07, T, sh, (-0.1, 0, 0), 'x', seg=40)
+    gear('Shoulder Gear', 0.19, 18, 0.03, F, sh, (-0.17, 0, 0), 'x')
     pa = empty('pauldron_' + tag, sh, (0.06, 0, 0.08), (-10, 12, 0))
     pa.scale = (1.55, 1.2, 1.2)
     plate('Pauldron', [(-0.2, 0.36), (0.3, 0.33), (0.42, 0.17), (0.39, -0.12), (0.1, -0.2), (-0.22, -0.04)], 0.54, A, pa, (0, 0.27, 0), inset=0.06, bevel=0.018)
     plate('Pauldron panel', [(-0.1, 0.28), (0.24, 0.26), (0.32, 0.14), (0.3, -0.06), (0.08, -0.12), (-0.12, 0.0)], 0.03, A2, pa, (0.0, -0.265, 0.0), inset=0.012, bevel=0.005)
+    plate('Pauldron ridge', [(-0.14, 0.3), (0.26, 0.28), (0.3, 0.22), (-0.16, 0.24)], 0.035, A, pa, (0.0, -0.275, 0.0), inset=0.008, bevel=0.005)
+    vents('Pauldron vent', pa, (0.33, -0.05, 0.1), 3, (0.02, 0.26, 0.03), (0.01, 0, -0.06), F, (0, 20, 0))
     marker(pa, (0.17, -0.3, 0.17), 0.1, 0.028, (0, 6, 0))
     box('Pauldron liner', (0.4, 0.4, 0.07), A2, pa, (0.08, 0, -0.19), (0, 8, 0), bevel=0.02)
     seam(pa, [(-0.2, -0.275, -0.06), (0.1, -0.275, -0.215), (0.38, -0.275, -0.135)], width=0.014)
@@ -456,6 +493,9 @@ def build_side(tag, mirror):
     loft('Bicep shell', [dict(z=-0.08, w=0.25, d=0.29, c=0.06), dict(z=-0.3, w=0.3, d=0.34, c=0.07), dict(z=-0.5, w=0.23, d=0.27, c=0.06)], A, ua)
     plate('Bicep plate', [(-0.08, -0.1), (0.12, -0.1), (0.15, -0.3), (0.09, -0.46), (-0.07, -0.46), (-0.11, -0.3)], 0.04, A2, ua, (0, -0.15, 0), inset=0.012, bevel=0.006)
     marker(ua, (0.03, -0.196, -0.2), 0.07, 0.022)
+    box('Bicep side plate', (0.035, 0.22, 0.3), A2, ua, (0.165, 0.0, -0.3), (0, 0, 0), bevel=0.01)
+    hose('Arm hose', ua, [(-0.13, 0.08, -0.06), (-0.17, 0.1, -0.3), (-0.12, 0.08, -0.56)], 0.014)
+    hose('Arm hose', ua, [(-0.1, 0.14, -0.06), (-0.14, 0.17, -0.3), (-0.09, 0.14, -0.56)], 0.012)
     cyl('Arm piston', 0.022, 0.42, T, ua, (0, 0.17, -0.3), seg=14, bevel=0.003)
     cyl('Arm piston sleeve', 0.034, 0.2, F, ua, (0, 0.17, -0.2), seg=14, bevel=0.004)
 
@@ -470,6 +510,11 @@ def build_side(tag, mirror):
     plate('Gauntlet plate', [(-0.09, -0.13), (0.09, -0.13), (0.13, -0.33), (0.09, -0.56), (-0.09, -0.56), (-0.13, -0.33)], 0.045, A, fa, (0, -0.165, 0), inset=0.014, bevel=0.006)
     seam(fa, [(0.115, -0.16, -0.14), (0.165, -0.2, -0.34), (0.125, -0.165, -0.57)], width=0.01)
     seam(fa, [(-0.115, -0.16, -0.14), (-0.165, -0.2, -0.34), (-0.125, -0.165, -0.57)], width=0.01)
+    gear('Elbow Gear', 0.15, 14, 0.025, F, fa, (-0.19, 0, 0), 'x')
+    box('Gauntlet side plate', (0.03, 0.24, 0.34), A2, fa, (-0.185, 0.0, -0.34), bevel=0.01)
+    vents('Gauntlet vent', fa, (0.0, 0.19, -0.24), 4, (0.16, 0.02, 0.025), (0, 0, -0.05), F)
+    for sx in (-0.07, 0.0, 0.07):
+        cyl('Wrist piston', 0.014, 0.16, T, fa, (sx, -0.12, -0.6), seg=10, bevel=0.002)
     marker(fa, (0.02, -0.213, -0.4), 0.03, 0.06)
     plate('Gauntlet fin', [(0.0, 0.16), (0.11, 0.05), (0.09, -0.2), (0.0, -0.18)], 0.05, A2, fa, (0.2, 0.025, -0.34), inset=0.008, bevel=0.006)
 
@@ -499,6 +544,12 @@ def build_side(tag, mirror):
     seam(th, [(0.2, -0.28, -0.5), (0.215, -0.28, -0.74)], width=0.012)
     marker(th, (0.03, -0.268, -0.18), 0.1, 0.03, (0, 0, 0))
     bolts(th, [(-0.1, -0.16), (0.12, -0.2), (0.15, -0.52), (-0.12, -0.52), (0.08, -0.8), (-0.07, -0.8)], -0.262, 0.012, T)
+    gear('Hip Gear', 0.22, 20, 0.03, F, th, (-0.09, 0, 0), 'x')
+    box('Thigh side plate', (0.04, 0.3, 0.46), A, th, (0.2, 0.0, -0.42), (0, 3, 0), bevel=0.012)
+    box('Thigh side panel', (0.02, 0.2, 0.28), A2, th, (0.225, 0.0, -0.42), (0, 3, 0), bevel=0.006)
+    vents('Thigh vent', th, (-0.19, 0.0, -0.3), 4, (0.02, 0.2, 0.03), (0.004, 0, -0.06), F)
+    hose('Thigh hose', th, [(-0.1, 0.17, -0.12), (-0.14, 0.2, -0.45), (-0.08, 0.16, -0.82)], 0.016)
+    cyl('Thigh piston sleeve', 0.036, 0.2, F, th, (0.0, 0.2, -0.32), seg=14, bevel=0.004)
     cyl('Thigh piston', 0.024, 0.46, T, th, (0.0, 0.2, -0.45), seg=14, bevel=0.003)
 
     stretch(th, 1.26, 1.14)
@@ -507,6 +558,12 @@ def build_side(tag, mirror):
     kn = empty('knee_' + tag, th, (0, 0, -1.2), (0, 3, 0))
     joint('Knee', kn, (0, 0.02, 0), 0.125, 0.42)
     plate('Knee cap', [(-0.12, 0.12), (0.12, 0.12), (0.14, -0.02), (0.0, -0.18), (-0.14, -0.02)], 0.07, A, kn, (0, -0.16, 0), (-6, 0, 0), inset=0.02)
+    gear('Knee Gear', 0.16, 16, 0.025, F, kn, (0.21, 0.02, 0), 'x')
+    box('Shin side plate', (0.035, 0.26, 0.5), A, kn, (0.2, 0.02, -0.5), (0, -4, 0), bevel=0.012)
+    box('Shin side plate', (0.035, 0.26, 0.5), A, kn, (-0.2, 0.02, -0.5), (0, 4, 0), bevel=0.012)
+    vents('Shin vent', kn, (0.0, 0.2, -0.36), 4, (0.18, 0.02, 0.03), (0, 0.004, -0.06), F)
+    hose('Shin hose', kn, [(0.08, 0.17, -0.1), (0.1, 0.22, -0.5), (0.07, 0.16, -1.0)], 0.014)
+    hose('Shin hose', kn, [(-0.08, 0.17, -0.1), (-0.1, 0.22, -0.5), (-0.07, 0.16, -1.0)], 0.014)
     cyl('Tibia', 0.075, 0.9, F, kn, (0, 0, -0.55))
     loft('Shin shell', [dict(z=-0.14, w=0.3, d=0.3, c=0.07), dict(z=-0.46, w=0.42, d=0.44, c=0.1, y=0.03), dict(z=-0.9, w=0.3, d=0.32, c=0.07), dict(z=-1.08, w=0.32, d=0.34, c=0.07)], A, kn)
     plate('Shin plate', [(-0.12, -0.2), (0.12, -0.2), (0.18, -0.5), (0.12, -0.98), (-0.12, -0.98), (-0.18, -0.5)], 0.08, A, kn, (0, -0.17, 0), inset=0.03, bevel=0.012)
@@ -529,6 +586,9 @@ def build_side(tag, mirror):
     loft('Foot', [dict(z=-0.29, w=0.36, d=0.74, c=0.07, y=-0.11), dict(z=-0.14, w=0.33, d=0.62, c=0.08, y=-0.08), dict(z=0.0, w=0.26, d=0.36, c=0.07, y=0.02)], A, bt, bevel=0.016)
     plate('Toe cap', [(-0.13, -0.05), (0.13, -0.05), (0.16, -0.27), (-0.16, -0.27)], 0.12, A2, bt, (0, -0.37, 0), (-28, 0, 0), inset=0.03)
     box('Heel block', (0.26, 0.2, 0.26), A2, bt, (0, 0.24, -0.16), bevel=0.03)
+    box('Ankle guard', (0.3, 0.05, 0.16), A, bt, (0, -0.2, -0.02), (-18, 0, 0), bevel=0.012)
+    for sx in (-0.11, 0.11):
+        cyl('Heel piston', 0.016, 0.22, T, bt, (sx, 0.2, -0.05), seg=10, rot=(20, 0, 0), bevel=0.002)
     box('Sole', (0.38, 0.78, 0.035), F, bt, (0, -0.11, -0.29), bevel=0.01)
     marker(bt, (0, -0.405, -0.1), 0.05, 0.022, (-28, 0, 0))
 
@@ -540,6 +600,9 @@ def build_side(tag, mirror):
     spar = [(-0.5, -0.56), (-0.33, -0.22), (-0.06, 0.1), (0.42, 0.44), (0.8, 0.7), (1.28, 0.92), (1.36, 0.8), (0.95, 0.56), (0.9, 0.44), (0.6, 0.3), (0.5, 0.14), (0.24, 0.02), (0.14, -0.22), (-0.2, -0.56)]
     plate('Wing spar', spar, 0.07, T, wd, (WR.x, WR.y - 0.07, WR.z), inset=0.02, bevel=0.01)
     plate('Spar cover', [(0.3, 0.28), (0.78, 0.6), (1.2, 0.8), (1.22, 0.74), (0.9, 0.5), (0.5, 0.26)], 0.03, A, wd, (WR.x, WR.y - 0.14, WR.z), inset=0.008, bevel=0.005)
+    gear('Wing Gear', 0.21, 20, 0.03, F, wd, (WR.x, WR.y - 0.1, WR.z), 'y')
+    cyl('Wing piston', 0.022, 0.6, T, wd, (0.6, 0.5, 0.72), 'z', rot=(0, 50, 0), seg=12, bevel=0.003)
+    cyl('Wing piston sleeve', 0.034, 0.3, F, wd, (0.5, 0.5, 0.64), 'z', rot=(0, 50, 0), seg=12, bevel=0.004)
     for (dx, dz, r) in ((0.0, 0.0, 0.17), (-0.21, -0.15, 0.1), (0.03, -0.28, 0.09), (-0.2, -0.36, 0.06)):
         p = (WR.x + dx, WR.y - 0.17, WR.z + dz)
         cyl('Rotor', r, 0.1, T, wd, p, 'y', seg=48, bevel=0.01)
