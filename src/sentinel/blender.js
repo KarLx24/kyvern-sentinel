@@ -157,6 +157,19 @@ export function buildFromBlender(rig, mats, gltf) {
     if (o.name === 'Reactor') handles.reactor = wrap(o);
     else handles.orbit.push(wrap(o));
   }
+  // Remember where every point sat in the rest pose, in Blender's units, for the wear marks.
+  const rest = new THREE.Matrix4();
+  const v = new THREE.Vector3();
+  const unscale = new THREE.Matrix4().copy(src.matrixWorld).invert();
+  rig.root.updateMatrixWorld(true);
+  rig.root.traverse((o) => {
+    if (!o.isMesh || o.geometry.getAttribute('aRest')) return;
+    const pos = o.geometry.getAttribute('position');
+    const out = new Float32Array(pos.count * 3);
+    rest.multiplyMatrices(unscale, o.matrixWorld);
+    for (let i = 0; i < pos.count; i++) v.fromBufferAttribute(pos, i).applyMatrix4(rest).toArray(out, i * 3);
+    o.geometry.setAttribute('aRest', new THREE.BufferAttribute(out, 3));
+  });
   handles.hip = rig.tilt.position.y;
   return attachWings(handles);
 }
@@ -166,7 +179,7 @@ export function blenderForms(forms) {
   const pair = (name, v) => ({ [`${name}_l`]: v, [`${name}_r`]: v });
   return {
     ...forms,
-    sentinel: { ...forms.sentinel, joints: {}, params: { ...forms.sentinel.params, fanTop: 4, fanBottom: -84 } },
+    sentinel: { ...forms.sentinel, joints: {}, params: { ...forms.sentinel.params, fanTop: 6, fanBottom: -80 } },
     flight: { ...forms.flight, joints: { helm: [-58, 0, 0], abdomen: [-6, 0, 0], ...pair('shoulder', [34, 0, 6]), ...pair('forearm', [8, 0, 0]), ...pair('thigh', [10, 0, -4]), ...pair('boot', [60, 0, 0]), ...pair('wingdrive', [0, 0, -14]) } },
     aegis: { ...forms.aegis, joints: { helm: [10, 0, 0], abdomen: [4, 0, 0], ...pair('shoulder', [-22, 0, -2]), ...pair('forearm', [-84, 0, -22]), ...pair('thigh', [-4, 0, 3]), ...pair('knee', [10, 0, 0]), ...pair('boot', [-6, 0, -3]), ...pair('wingdrive', [0, 62, -8]) } },
   };

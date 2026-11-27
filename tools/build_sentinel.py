@@ -473,10 +473,11 @@ def build_side(tag, mirror):
     marker(fa, (0.02, -0.213, -0.4), 0.03, 0.06)
     plate('Gauntlet fin', [(0.0, 0.16), (0.11, 0.05), (0.09, -0.2), (0.0, -0.18)], 0.05, A2, fa, (0.2, 0.025, -0.34), inset=0.008, bevel=0.006)
 
-    stretch(fa, 1.18, 1.1)
+    stretch(fa, 1.18, 1.24)
 
     # hand, closed fist
     hd = empty('hand_' + tag, fa, (0, 0, -0.78))
+    hd.scale = (1.3, 1.3, 1.3)
     cyl('Wrist', 0.075, 0.07, T, hd, (0, 0, 0.02), seg=32)
     box('Palm', (0.21, 0.15, 0.17), A2, hd, (0, 0, -0.11), bevel=0.02)
     box('Knuckle guard', (0.23, 0.07, 0.07), A, hd, (0, -0.085, -0.05), (20, 0, 0), bevel=0.014)
@@ -550,13 +551,13 @@ def build_side(tag, mirror):
     n = 9
     for i in range(n):
         k = i / (n - 1)
-        ang = 4 - k * 88  # degrees above the outward horizontal
+        ang = 6 - k * 86  # degrees above the outward horizontal
         ln = 2.6 + 0.4 * math.sin(k * math.pi) + 0.5 * k
         w = 0.25 + 0.04 * k
         bl = empty('blade_%s_%d' % (tag, i + 1), wd, (WR.x, WR.y - 0.02 + i * 0.03, WR.z), (0, -ang, 0))
-        plate('Blade', [(0.0, -w * 0.5), (ln * 0.26, -w), (ln, -w * 0.9), (ln * 0.985, -w * 0.5), (ln * 0.9, w * 0.42), (0.0, w * 0.5)], 0.026, BL if i % 2 else A2, bl, inset=0.012, bevel=0.005)
+        plate('Blade', [(0.0, -w * 0.5), (ln * 0.26, -w), (ln, -w * 1.35), (ln * 0.985, -w * 0.9), (ln * 0.9, w * 0.3), (0.0, w * 0.5)], 0.026, BL if i % 2 else A2, bl, inset=0.012, bevel=0.005)
         plate('Blade root', [(0.05, -w * 0.72), (ln * 0.27, -w * 1.12), (ln * 0.34, -w * 0.3), (0.07, w * 0.62)], 0.018, A, bl, (0, -0.026, 0), inset=0.008, bevel=0.004)
-        seam(bl, [(ln * 0.36, -0.03, -w * 0.955), (ln * 0.97, -0.03, -w * 0.87)], width=0.024, depth=0.012)
+        seam(bl, [(ln * 0.3, -0.03, -w * 1.0), (ln * 0.975, -0.03, -w * 1.31)], width=0.026, depth=0.012)
         bolts(bl, [(ln * 0.1, 0.0), (ln * 0.2, -w * 0.3)], -0.046, 0.01, T)
 
 

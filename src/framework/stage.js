@@ -100,11 +100,11 @@ export class Stage {
     this.key = key;
     this.keyOffset = key.position.clone();
     this.scene.add(key, key.target);
-    const cool = new THREE.DirectionalLight(t.rimCool, 1.4);
+    const cool = new THREE.DirectionalLight(t.rimCool, 0.9);
     cool.position.set(-7, 5, -8);
     const warm = new THREE.DirectionalLight(t.rimWarm, 0.9);
     warm.position.set(8, 3.5, -6);
-    const fill = new THREE.DirectionalLight('#7fa8ff', 0.7);
+    const fill = new THREE.DirectionalLight('#c2cad8', 0.6);
     fill.position.set(-6, 2, 6);
     this.scene.add(cool, warm, fill);
   }
@@ -122,9 +122,9 @@ export class Stage {
       env.add(m);
     };
     panel(9, 5, '#ffffff', 7, [0, 9.5, 2]);
-    panel(3, 9, t.rimCool, 5, [-11, 4, -4]);
+    panel(3, 9, t.rimCool, 3, [-11, 4, -4]);
     panel(3, 9, t.rimWarm, 7, [11, 4, -5]);
-    panel(12, 4, '#8db4ff', 2.2, [0, 3, 13]);
+    panel(12, 4, '#c8d0de', 2.2, [0, 3, 13]);
     panel(1.2, 8, '#ffffff', 6, [-7, 4, 9]);
     panel(1.2, 8, '#ffffff', 5, [8, 5, 8]);
     panel(14, 1.2, t.rimCool, 3, [0, 0.4, -12]);
