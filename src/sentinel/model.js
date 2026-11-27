@@ -204,17 +204,23 @@ export function buildSentinel(rig, m) {
     handles.feathers.push(feathers);
   }
 
-  // Wings. `open` runs 0 (folded away behind the back) to 1 (spread to the form's fan angles).
-  // Opening is staged like a real wing: the arm swings up first, then the blades slide out
-  // and fan open one after another from the top.
+  attachWings(handles);
+  return handles;
+}
+
+// Wings. `open` runs 0 (folded away behind the back) to 1 (spread to the form's fan angles).
+// Opening is staged like a real wing: the arm swings up first, then the blades slide out
+// and fan open one after another from the top. handles.feathers is one list of blades per side.
+export function attachWings(handles) {
   const smooth = (x) => { const t = Math.min(1, Math.max(0, x)); return t * t * (3 - 2 * t); };
   handles.wings = (open, top, bottom, flutter, forms) => {
     const arm = smooth(open / 0.55);
     const fold = 1 - arm;
     for (const side of ['l', 'r']) forms.nudge(`wingdrive_${side}`, 0, fold * -0.5, fold * -2.05);
     for (const set of handles.feathers) {
+      const n = set.length - 1;
       set.forEach((blade, i) => {
-        const k = i / (BLADES - 1);
+        const k = i / n;
         const out = smooth((open - 0.3 - k * 0.3) / 0.4); // each blade starts a little after the one above
         const spread = top + (bottom - top) * k + Math.sin(flutter + i * 0.5) * 0.6 * out;
         const tucked = 20 + k * 6; // stacked along the folded arm

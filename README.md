@@ -50,6 +50,12 @@ From another frame: `frame.contentWindow.postMessage({ sentinel: ['setState', 's
 
 See [docs/FRAMEWORK.md](docs/FRAMEWORK.md). In short: `src/framework/` is a small robot framework that knows nothing about the Sentinel, and `src/sentinel/` is the Sentinel built on it (26 parts split joint by joint, each made of named pieces).
 
+### Where the robot comes from
+
+The robot on the page is the Blender model. `tools/build_sentinel.py` builds him in Blender, `tools/export_glb.py` writes him out as `models/sentinel.glb`, and `src/sentinel/blender.js` turns each Blender joint into a part, so he keeps the teardown, forms, folding wings, walking and colour lines. To change his shape, edit the Blender script and export again (the steps are at the top of `tools/export_glb.py`).
+
+The first robot, written in code, is still in `src/sentinel/model.js`. Add `?model=coded` to the address to see it. The page also falls back to it if the model file fails to load.
+
 The earlier living render is kept at [`/portrait/`](portrait/).
 
 ## Credits

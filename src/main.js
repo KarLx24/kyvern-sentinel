@@ -10,6 +10,7 @@ import { Tour } from './framework/tour.js';
 import { Hud } from './framework/hud.js';
 import { loadPartModels } from './framework/partmodels.js';
 import { buildSentinel, SECTIONS } from './sentinel/model.js';
+import { loadBlenderSentinel, buildFromBlender, blenderForms } from './sentinel/blender.js';
 import { ROLES, LINES, FORMS, STATES, CHAPTERS, CARDS } from './sentinel/config.js';
 
 const query = new URLSearchParams(location.search);
@@ -21,8 +22,11 @@ const stage = new Stage(canvas);
 const rig = new Rig();
 const firstLine = LINES.some((l) => l.id === query.get('line')) ? query.get('line') : LINES[0].id;
 const paint = new Paint(ROLES, LINES, firstLine);
-const model = buildSentinel(rig, paint.mats);
-const forms = new Forms(rig, FORMS, pick('form', FORMS, 'sentinel'));
+// The Blender-built model is the default. ?model=coded shows the one drawn in code, and the
+// page falls back to it if the model file cannot be loaded.
+const gltf = query.get('model') === 'coded' ? null : await loadBlenderSentinel('./models/sentinel.glb').catch((err) => (console.warn('Blender model did not load, using the coded Sentinel', err), null));
+const model = gltf ? buildFromBlender(rig, paint.mats, gltf) : buildSentinel(rig, paint.mats);
+const forms = new Forms(rig, gltf ? blenderForms(FORMS) : FORMS, pick('form', FORMS, 'sentinel'));
 const walker = new Walker(rig, forms);
 const behaviour = new Behaviour(forms);
 stage.scene.add(rig.root);
