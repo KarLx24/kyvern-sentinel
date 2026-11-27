@@ -166,7 +166,7 @@ export function blenderForms(forms) {
   const pair = (name, v) => ({ [`${name}_l`]: v, [`${name}_r`]: v });
   return {
     ...forms,
-    sentinel: { ...forms.sentinel, joints: {}, params: { ...forms.sentinel.params, fanTop: 10, fanBottom: -82 } },
+    sentinel: { ...forms.sentinel, joints: {}, params: { ...forms.sentinel.params, fanTop: 4, fanBottom: -84 } },
     flight: { ...forms.flight, joints: { helm: [-58, 0, 0], abdomen: [-6, 0, 0], ...pair('shoulder', [34, 0, 6]), ...pair('forearm', [8, 0, 0]), ...pair('thigh', [10, 0, -4]), ...pair('boot', [60, 0, 0]), ...pair('wingdrive', [0, 0, -14]) } },
     aegis: { ...forms.aegis, joints: { helm: [10, 0, 0], abdomen: [4, 0, 0], ...pair('shoulder', [-22, 0, -2]), ...pair('forearm', [-84, 0, -22]), ...pair('thigh', [-4, 0, 3]), ...pair('knee', [10, 0, 0]), ...pair('boot', [-6, 0, -3]), ...pair('wingdrive', [0, 62, -8]) } },
   };
