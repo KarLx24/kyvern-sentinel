@@ -378,7 +378,7 @@ function tick(real) {
   paint.mats.thrust.emissiveIntensity = p.thrust * (0.85 + 0.15 * Math.sin(time * 31)) + Math.abs(walker.fwd) * (flying ? 3 : 0);
 
   const hover = flying ? Math.sin(time * 1.6) * 0.06 : 0;
-  rig.tilt.position.y = 1.98 + forms.height + rig.lift + (walker.bob || 0) + hover;
+  rig.tilt.position.y = (model.hip || 1.98) + forms.height + rig.lift + (walker.bob || 0) + hover;
   focus.set(rig.root.position.x, 1.95 + forms.height * 0.85 + rig.lift * 0.7, rig.root.position.z);
   paint.update(real, tmp.set(rig.root.position.x, rig.tilt.position.y - 0.1, rig.root.position.z));
   // a full teardown is taller and wider than the robot, so the camera gives it room.

@@ -6,7 +6,7 @@
 import * as THREE from 'three';
 import { SECTIONS, attachWings } from './model.js';
 
-const SCALE = 1.98 / 2.4; // Blender builds him taller; bring the hips to the framework's height
+const HEIGHT = 3.67; // how tall he stands on the page, crest to sole
 
 // Blender material name -> paint role, so colour lines repaint him.
 const ROLE = {
@@ -47,11 +47,12 @@ export async function loadBlenderSentinel(url) {
 
 export function buildFromBlender(rig, mats, gltf) {
   for (const s of SECTIONS) rig.section(s);
-  rig.tilt.position.set(0, 1.98, 0);
+  // Blender builds him at his own size; scale him to the page and put the hips where they land.
   const src = new THREE.Group();
-  src.scale.setScalar(SCALE);
   src.add(gltf.scene);
+  src.scale.setScalar(HEIGHT / new THREE.Box3().setFromObject(gltf.scene).getSize(new THREE.Vector3()).y);
   src.updateMatrixWorld(true);
+  rig.tilt.position.set(0, gltf.scene.getObjectByName('pelvis').getWorldPosition(new THREE.Vector3()).y, 0);
   rig.root.updateMatrixWorld(true);
 
   const nodes = {};
@@ -97,7 +98,7 @@ export function buildFromBlender(rig, mats, gltf) {
         g = spots.reduce((best, s) => (s.c.distanceToSquared(c) < best.d ? { d: s.c.distanceToSquared(c), g: s.g } : best), { d: Infinity, g: null }).g;
       }
       const role = ROLE[o.material && o.material.name];
-      if (role) o.material = mats[role === 'glow' && part.id.startsWith('blades') ? 'edge' : role];
+      if (role) o.material = mats[role];
       g.attach(o);
     }
     // each piece travels away from the middle of its part when the part is opened
@@ -130,7 +131,7 @@ export function buildFromBlender(rig, mats, gltf) {
       const blade = nodes[`blade_${S}_${i}`];
       blade.traverse((o) => {
         const role = o.isMesh && ROLE[o.material.name];
-        if (role) o.material = mats[role === 'glow' ? 'edge' : role];
+        if (role) o.material = mats[role];
       });
       blades.body.attach(blade);
       const a = blade.rotation.z;
@@ -156,6 +157,7 @@ export function buildFromBlender(rig, mats, gltf) {
     if (o.name === 'Reactor') handles.reactor = wrap(o);
     else handles.orbit.push(wrap(o));
   }
+  handles.hip = rig.tilt.position.y;
   return attachWings(handles);
 }
 
@@ -164,7 +166,7 @@ export function blenderForms(forms) {
   const pair = (name, v) => ({ [`${name}_l`]: v, [`${name}_r`]: v });
   return {
     ...forms,
-    sentinel: { ...forms.sentinel, joints: {} },
+    sentinel: { ...forms.sentinel, joints: {}, params: { ...forms.sentinel.params, fanTop: 10, fanBottom: -82 } },
     flight: { ...forms.flight, joints: { helm: [-58, 0, 0], abdomen: [-6, 0, 0], ...pair('shoulder', [34, 0, 6]), ...pair('forearm', [8, 0, 0]), ...pair('thigh', [10, 0, -4]), ...pair('boot', [60, 0, 0]), ...pair('wingdrive', [0, 0, -14]) } },
     aegis: { ...forms.aegis, joints: { helm: [10, 0, 0], abdomen: [4, 0, 0], ...pair('shoulder', [-22, 0, -2]), ...pair('forearm', [-84, 0, -22]), ...pair('thigh', [-4, 0, 3]), ...pair('knee', [10, 0, 0]), ...pair('boot', [-6, 0, -3]), ...pair('wingdrive', [0, 62, -8]) } },
   };
