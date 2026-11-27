@@ -3,11 +3,11 @@
 
 // One material per role. `glow` is how hard a light role shines.
 export const ROLES = {
-  // `wear` is how scuffed the metal is: 0 factory fresh, 1 the scratched plate of the design
-  armor: { rough: 0.5, metal: 0.6, env: 0.85, wear: 1 },
-  armor2: { rough: 0.56, metal: 0.6, env: 0.8, wear: 1 },
-  frame: { rough: 0.6, metal: 0.85, env: 0.7, wear: 0.6 },
-  trim: { rough: 0.42, metal: 1, env: 1.0, wear: 0.7 },
+  // `wear` is how scuffed the metal is: 0 factory fresh (the clean look Karl chose), 1 scratched plate
+  armor: { rough: 0.42, metal: 0.35, env: 0.9, wear: 0 },
+  armor2: { rough: 0.48, metal: 0.3, env: 0.85, wear: 0 },
+  frame: { rough: 0.55, metal: 0.7, env: 0.7, wear: 0 },
+  trim: { rough: 0.34, metal: 1, env: 1.1, wear: 0 },
   mark: { rough: 0.45, metal: 0.3 },
   visor: { rough: 0.12, metal: 0.9, color: '#04070b' },
   glow: { glow: 1.5 },
@@ -21,7 +21,7 @@ const line = (id, name, armor, armor2, frame, trim, glow, mark) => ({
   id, name, swatch: [armor, glow], roles: { armor, armor2, frame, trim, glow, edge: glow, core: glow, thrust: glow, mark },
 });
 export const LINES = [
-  line('obsidian', 'Obsidian', '#232529', '#3b3e44', '#0c0d10', '#93683a', '#35d9f8', '#d8222b'),
+  line('obsidian', 'Obsidian', '#1d1e22', '#5b6069', '#0b0c0e', '#a87b45', '#35d9f8', '#d8222b'),
   line('cobalt', 'Cobalt', '#1546c8', '#dfe5ee', '#11141c', '#e3b23c', '#7fe9ff', '#e8312a'),
   line('arctic', 'Arctic', '#b4bdc8', '#69768a', '#1a1f27', '#5b6b7d', '#35d8ff', '#ff6a1f'),
   line('forge', 'Forge', '#8f1418', '#2a1d1c', '#0d0a0a', '#e0a23a', '#ffb23f', '#ffd9a0'),

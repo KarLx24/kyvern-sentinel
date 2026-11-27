@@ -85,7 +85,7 @@ export class Stage {
 
   lights() {
     const t = this.theme;
-    this.scene.add(new THREE.HemisphereLight('#c3cede', '#0a0d12', 0.32));
+    this.scene.add(new THREE.HemisphereLight('#d5dae2', '#1a1c20', 0.75));
     const key = new THREE.DirectionalLight(t.key, 2.4);
     key.position.set(4.5, 9, 7);
     key.castShadow = true;
@@ -100,7 +100,7 @@ export class Stage {
     this.key = key;
     this.keyOffset = key.position.clone();
     this.scene.add(key, key.target);
-    const cool = new THREE.DirectionalLight(t.rimCool, 0.9);
+    const cool = new THREE.DirectionalLight(t.rimCool, 0.5);
     cool.position.set(-7, 5, -8);
     const warm = new THREE.DirectionalLight(t.rimWarm, 0.9);
     warm.position.set(8, 3.5, -6);
