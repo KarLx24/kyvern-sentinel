@@ -600,15 +600,16 @@ def build_side(tag, mirror):
     spar = [(-0.5, -0.56), (-0.33, -0.22), (-0.06, 0.1), (0.42, 0.44), (0.8, 0.7), (1.28, 0.92), (1.36, 0.8), (0.95, 0.56), (0.9, 0.44), (0.6, 0.3), (0.5, 0.14), (0.24, 0.02), (0.14, -0.22), (-0.2, -0.56)]
     plate('Wing spar', spar, 0.07, T, wd, (WR.x, WR.y - 0.07, WR.z), inset=0.02, bevel=0.01)
     plate('Spar cover', [(0.3, 0.28), (0.78, 0.6), (1.2, 0.8), (1.22, 0.74), (0.9, 0.5), (0.5, 0.26)], 0.03, A, wd, (WR.x, WR.y - 0.14, WR.z), inset=0.008, bevel=0.005)
-    gear('Wing Gear', 0.21, 20, 0.03, F, wd, (WR.x, WR.y - 0.1, WR.z), 'y')
+    gear('Wing Gear', 0.21, 20, 0.03, F, wd, (WR.x - 0.04, WR.y - 0.02, WR.z), 'x')
     cyl('Wing piston', 0.022, 0.6, T, wd, (0.6, 0.5, 0.72), 'z', rot=(0, 50, 0), seg=12, bevel=0.003)
     cyl('Wing piston sleeve', 0.034, 0.3, F, wd, (0.5, 0.5, 0.64), 'z', rot=(0, 50, 0), seg=12, bevel=0.004)
     for (dx, dz, r) in ((0.0, 0.0, 0.17), (-0.21, -0.15, 0.1), (0.03, -0.28, 0.09), (-0.2, -0.36, 0.06)):
-        p = (WR.x + dx, WR.y - 0.17, WR.z + dz)
-        cyl('Rotor', r, 0.1, T, wd, p, 'y', seg=48, bevel=0.01)
-        cyl('Rotor inner', r * 0.68, 0.13, F, wd, p, 'y', seg=40)
-        cyl('Rotor hub', r * 0.4, 0.16, T, wd, p, 'y', seg=32)
-        cyl('Rotor pin', r * 0.16, 0.19, F, wd, p, 'y', seg=6, bevel=0.003)
+        # the wheels face sideways (axle along x), stepped back along the wing arm
+        p = (WR.x + 0.06, WR.y - 0.02 - dx * 1.2, WR.z + dz)
+        cyl('Rotor', r, 0.1, T, wd, p, 'x', seg=48, bevel=0.01)
+        cyl('Rotor inner', r * 0.68, 0.13, F, wd, p, 'x', seg=40)
+        cyl('Rotor hub', r * 0.4, 0.16, T, wd, p, 'x', seg=32)
+        cyl('Rotor pin', r * 0.16, 0.19, F, wd, p, 'x', seg=6, bevel=0.003)
 
     # nine blades fanned from the rotor
     n = 9

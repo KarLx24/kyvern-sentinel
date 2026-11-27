@@ -45,6 +45,7 @@ const app = {
   caption: '',
   wings: query.get('wings') !== 'folded',
 };
+let wingVel = 0; // how fast the wings are moving, so they ease in and out and can turn round mid-way
 let wing = 0; // 0 folded away, 1 spread. Starts folded so he opens them as the page loads.
 
 // ---- HUD -------------------------------------------------------------------------------
@@ -407,7 +408,11 @@ function tick(real) {
   const p = forms.params;
   // wings: flight always needs them out; otherwise they follow the Wings switch
   const wingGoal = app.wings || forms.current === 'flight' ? 1 : 0;
-  wing += Math.sign(wingGoal - wing) * Math.min(Math.abs(wingGoal - wing), dt / (wingGoal ? 2.1 : 1.5));
+  const wingMax = wingGoal ? 0.46 : 0.52; // top speed, in spreads per second
+  const wingWant = Math.max(-wingMax, Math.min(wingMax, (wingGoal - wing) * 3.2));
+  wingVel += (wingWant - wingVel) * (1 - Math.exp(-5 * dt));
+  wing = Math.max(0, Math.min(1, wing + wingVel * dt));
+  if (Math.abs(wingGoal - wing) < 0.0015 && Math.abs(wingVel) < 0.01) { wing = wingGoal; wingVel = 0; }
   model.wings(wing, p.fanTop, p.fanBottom, time * 2.2 * p.wingBeat, forms);
   model.orbit.forEach((r, i) => {
     const spin = behaviour.spin * (1 + paint.charge * 9); // the rings whirl while the core charges
