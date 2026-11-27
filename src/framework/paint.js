@@ -18,6 +18,7 @@ export class Paint {
       uSwOrigin: { value: new THREE.Vector3(0, 1.9, 0) },
       uSwDir: { value: new THREE.Vector3(0.3, 1, 0.25).normalize() },
       uSwEdge: { value: new THREE.Color('#ffffff') },
+      uTime: { value: 0 },
     };
     this.t = 1;
     this.spread = 0; // 0..1 while the colour is travelling
@@ -57,7 +58,7 @@ export class Paint {
           `#include <common>
           varying vec3 vSwp;
           uniform float uSweep; uniform float uSwOn; uniform vec3 uSwOrigin; uniform vec3 uSwDir; uniform vec3 uSwEdge;
-          uniform vec3 uToColor; uniform vec3 uToEmissive;
+          uniform vec3 uToColor; uniform vec3 uToEmissive; uniform float uTime;
           // Worn metal: grime, fine scratches and bare edges, drawn from where each point sat
           // in the rest pose (aRest) so the marks stay put when he moves.
           varying vec3 vRest;
@@ -96,6 +97,8 @@ export class Paint {
           '#include <emissivemap_fragment>',
           `#include <emissivemap_fragment>
           totalEmissiveRadiance = mix(totalEmissiveRadiance, uToEmissive * ${mat.emissiveIntensity.toFixed(2)}, swK);
+          // lights breathe: a soft pulse travels out from the core along every lit line
+          totalEmissiveRadiance *= ${mat.userData.glow ? '0.7 + 0.55 * pow(0.5 + 0.5 * sin(swS * 2.4 - uTime * 2.6), 3.0)' : '1.0'};
           totalEmissiveRadiance += uSwEdge * exp(-abs(swS - uSweep) * 22.0) * uSwOn * 1.8;`,
         );
     };
@@ -136,6 +139,7 @@ export class Paint {
 
   update(dt, origin) {
     if (origin) this.shared.uSwOrigin.value.copy(origin);
+    this.shared.uTime.value += dt;
     if (this.t >= 1) return;
     this.t = Math.min(1, this.t + dt / SWEEP_TIME);
     this.spread = this.t;

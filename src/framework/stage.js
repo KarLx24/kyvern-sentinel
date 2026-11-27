@@ -294,6 +294,28 @@ export class Stage {
       new THREE.PointsMaterial({ color: new THREE.Color(this.theme.grid).multiplyScalar(1.4), size: 0.03, transparent: true, opacity: 0.4, depthWrite: false, blending: THREE.AdditiveBlending }),
     );
     pts.visible = !this.studio;
+
+    // Studio graphics: thin rings and tick marks turning slowly behind the robot.
+    const halo = new THREE.Group();
+    const lineMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(this.theme.grid), transparent: true, opacity: 0.16, depthWrite: false, fog: false, side: THREE.DoubleSide });
+    this.haloRings = [];
+    for (const [r, w, arc] of [[3.1, 0.012, 6.283], [3.9, 0.03, 1.9], [4.6, 0.01, 6.283], [5.6, 0.05, 0.9], [6.4, 0.008, 6.283]]) {
+      const g = new THREE.Group();
+      for (let i = 0; i < (arc < 6 ? 3 : 1); i++) g.add(new THREE.Mesh(new THREE.RingGeometry(r, r + w, 128, 1, (i * Math.PI * 2) / 3, arc), lineMat));
+      if (arc > 6) for (let i = 0; i < 48; i++) {
+        const t = new THREE.Mesh(new THREE.PlaneGeometry(0.008, i % 4 ? 0.06 : 0.14), lineMat);
+        const a = (i / 48) * Math.PI * 2;
+        t.position.set(Math.cos(a) * (r + 0.1), Math.sin(a) * (r + 0.1), 0);
+        t.rotation.z = a - Math.PI / 2;
+        g.add(t);
+      }
+      halo.add(g);
+      this.haloRings.push(g);
+    }
+    halo.position.set(0, 2.3, -4.5);
+    halo.visible = this.studio;
+    this.halo = halo;
+    this.scene.add(halo);
     this.dust = pts;
     this.scene.add(pts);
   }
@@ -392,6 +414,7 @@ export class Stage {
     this.camera.position.copy(c.target).add(off);
     c.update();
     this.ticks.rotation.y += dt * 0.25;
+    this.haloRings.forEach((g, i) => (g.rotation.z += dt * (i % 2 ? -0.05 : 0.035) * (1 + i * 0.3)));
     this.dust.rotation.y += dt * 0.01;
   }
 

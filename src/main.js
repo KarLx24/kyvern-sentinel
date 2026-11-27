@@ -262,6 +262,9 @@ canvas.addEventListener('dblclick', () => stage.home());
 const tmp = new THREE.Vector3();
 
 const corePos = new THREE.Vector3();
+// the core throws its own light on his chest, arms and wings
+const coreLight = new THREE.PointLight('#ffffff', 0, 3.2, 2);
+stage.scene.add(coreLight);
 const box = new THREE.Box3();
 const scr = { x: 0, y: 0, visible: false };
 // Each label is tied to its part: a dot sits on the part's own metal and a leader line runs
@@ -388,6 +391,9 @@ function tick(real) {
   rig.tilt.position.y = (model.hip || 1.98) + forms.height + rig.lift + (walker.bob || 0) + hover;
   focus.set(rig.root.position.x, 1.95 + forms.height * 0.85 + rig.lift * 0.7, rig.root.position.z);
   model.reactor.getWorldPosition(corePos);
+  coreLight.position.copy(corePos).addScaledVector(tmp.set(0, 0, 1).applyQuaternion(rig.root.quaternion), 0.45);
+  coreLight.color.copy(paint.mats.core.emissive);
+  coreLight.intensity = 1.6 * behaviour.core;
   paint.update(real, corePos);
   // a full teardown is taller and wider than the robot, so the camera gives it room.
   // Opening a single part or section never moves the camera.

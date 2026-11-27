@@ -359,6 +359,28 @@ def vents(name, parent, loc, n, size, step, mat=None, rot=(0, 0, 0)):
         box(name, size, mat or F, parent, (loc[0] + step[0] * k, loc[1] + step[1] * k, loc[2] + step[2] * k), rot, bevel=0.003)
 
 
+def lettering(name, text, size, mat, parent, loc, rot=(0, 0, 0), depth=0.006):
+    """Raised lettering that faces the viewer. Only for centre parts: a mirrored side would read backwards."""
+    cu = bpy.data.curves.new(name, 'FONT')
+    cu.body = text
+    cu.size = size
+    cu.extrude = depth
+    cu.align_x = 'CENTER'
+    tmp = bpy.data.objects.new(name + ' src', cu)
+    ROOT.objects.link(tmp)
+    bpy.context.view_layer.update()
+    me = bpy.data.meshes.new_from_object(tmp.evaluated_get(bpy.context.evaluated_depsgraph_get()))
+    bpy.data.objects.remove(tmp)
+    me.materials.clear()
+    me.materials.append(mat)
+    ob = bpy.data.objects.new(name, me)
+    ROOT.objects.link(ob)
+    ob.parent = parent
+    ob.location = loc
+    ob.rotation_euler = (R(90 + rot[0]), R(rot[1]), R(rot[2]))
+    return ob
+
+
 def mx(pts, s):
     return [(x * s, z) for x, z in pts]
 
@@ -428,6 +450,10 @@ for s in (1, -1):
     cyl('Neck cable', 0.03, 0.34, F, chest, (s * 0.15, -0.02, 0.76), 'z', rot=(0, s * 22, 0), seg=14, bevel=0.004)
 plate('Sternum', [(-0.07, 0.68), (0.07, 0.68), (0.045, 0.5), (0.0, 0.47), (-0.045, 0.5)], 0.13, A2, chest, (0, -0.2, 0), (-6, 0, 0), inset=0.015)
 box('Sternum light', (0.03, 0.012, 0.1), G, chest, (0, -0.338, 0.6), (-6, 0, 0), bevel=0)
+lettering('Unit mark', 'SN-01', 0.07, G, chest, (0.37, -0.36, 0.44), (-6, 0, 9))
+lettering('Name mark', 'KYVERN', 0.075, T, chest, (0, 0.425, 0.5), (0, 0, 180))
+for k in range(3):
+    box('Hazard stripe', (0.03, 0.012, 0.09), T, chest, (-0.3 - k * 0.05, -0.345, 0.46), (-6, -9, 24), bevel=0.002)
 cyl('Shoulder yoke', 0.09, 1.54, F, chest, (0, 0.02, 0.47), 'x')
 plate('Back plate', [(-0.42, 0.66), (0.42, 0.66), (0.3, 0.02), (-0.3, 0.02)], 0.1, A, chest, (0, 0.32, 0), inset=0.03)
 loft('Back pack', [dict(z=0.05, w=0.44, d=0.18, c=0.05), dict(z=0.38, w=0.6, d=0.24, c=0.06), dict(z=0.6, w=0.46, d=0.18, c=0.05)], A2, chest, (0, 0.36, 0))
@@ -476,16 +502,23 @@ def build_side(tag, mirror):
     sphere('Shoulder ball', 0.15, F, sh)
     cyl('Shoulder collar', 0.16, 0.07, T, sh, (-0.1, 0, 0), 'x', seg=40)
     gear('Shoulder Gear', 0.19, 18, 0.03, F, sh, (-0.17, 0, 0), 'x')
-    pa = empty('pauldron_' + tag, sh, (0.06, 0, 0.08), (-10, 12, 0))
-    pa.scale = (1.55, 1.2, 1.2)
-    plate('Pauldron', [(-0.2, 0.36), (0.3, 0.33), (0.42, 0.17), (0.39, -0.12), (0.1, -0.2), (-0.22, -0.04)], 0.54, A, pa, (0, 0.27, 0), inset=0.06, bevel=0.018)
-    plate('Pauldron panel', [(-0.1, 0.28), (0.24, 0.26), (0.32, 0.14), (0.3, -0.06), (0.08, -0.12), (-0.12, 0.0)], 0.03, A2, pa, (0.0, -0.265, 0.0), inset=0.012, bevel=0.005)
-    plate('Pauldron ridge', [(-0.14, 0.3), (0.26, 0.28), (0.3, 0.22), (-0.16, 0.24)], 0.035, A, pa, (0.0, -0.275, 0.0), inset=0.008, bevel=0.005)
-    vents('Pauldron vent', pa, (0.33, -0.05, 0.1), 3, (0.02, 0.26, 0.03), (0.01, 0, -0.06), F, (0, 20, 0))
-    marker(pa, (0.17, -0.3, 0.17), 0.1, 0.028, (0, 6, 0))
-    box('Pauldron liner', (0.4, 0.4, 0.07), A2, pa, (0.08, 0, -0.19), (0, 8, 0), bevel=0.02)
-    seam(pa, [(-0.2, -0.275, -0.06), (0.1, -0.275, -0.215), (0.38, -0.275, -0.135)], width=0.014)
-    bolts(pa, [(-0.07, 0.24), (0.21, 0.225), (0.265, -0.03)], -0.298, 0.011)
+    # pauldron: three overlapping lames that arch over the shoulder, instead of one block
+    pa = empty('pauldron_' + tag, sh, (0.0, 0, 0.0), (-6, 0, 0))
+    for k, (ang, wid, dep, mat) in enumerate(((8, 0.5, 0.6, A), (44, 0.46, 0.55, A2), (80, 0.42, 0.5, A))):
+        rr = 0.3 - k * 0.012
+        cx, cz = rr * math.sin(R(ang)), rr * math.cos(R(ang))
+        loft('Pauldron lame %d' % (k + 1), [dict(z=-0.035, w=wid, d=dep, c=0.1), dict(z=0.035, w=wid - 0.07, d=dep - 0.08, c=0.09)], mat, pa, (cx, 0, cz), (0, ang, 0), bevel=0.012)
+        box('Pauldron stripe', (wid * 0.5, 0.02, 0.012), T, pa, (cx + 0.04 * math.sin(R(ang)), -dep / 2 + 0.045, cz + 0.04 * math.cos(R(ang))), (0, ang, 0), bevel=0.003)
+    loft('Pauldron crest', [dict(z=0.0, w=0.1, d=0.4, c=0.03), dict(z=0.05, w=0.05, d=0.3, c=0.02)], T, pa, (0.34 * math.sin(R(8)), 0, 0.34 * math.cos(R(8))), (0, 8, 0), bevel=0.008)
+    seam(pa, [(0.345, -0.22, 0.06), (0.345, 0.22, 0.06)], width=0.012)
+    # front and back faces, so the shoulder reads as a shell from the front instead of an edge
+    for fy, rx in ((-0.27, 90), (0.25, -90)):
+        loft('Pauldron face', [dict(z=0.0, w=0.46, d=0.36, c=0.13), dict(z=0.035, w=0.4, d=0.3, c=0.11)], A, pa, (0.13, fy, 0.13), (rx, 0, 0), bevel=0.012)
+        loft('Pauldron inlay', [dict(z=0.0, w=0.3, d=0.2, c=0.08), dict(z=0.02, w=0.26, d=0.16, c=0.07)], A2, pa, (0.13, fy + (-0.035 if fy < 0 else 0.035), 0.13), (rx, 0, 0), bevel=0.006)
+    cyl('Pauldron boss', 0.055, 0.03, T, pa, (0.13, -0.33, 0.13), 'y', seg=24)
+    seam(pa, [(0.0, -0.33, 0.02), (0.26, -0.33, 0.02)], width=0.012)
+    marker(pa, (0.2, -0.285, 0.24), 0.08, 0.024, (0, 44, 0))
+    bolts(pa, [(0.08, 0.3), (0.26, 0.2)], -0.25, 0.011, T)
 
     # upper arm
     ua = empty('upperarm_' + tag, sh, (0.1, 0, -0.1), (0, -13, 0))
@@ -542,6 +575,8 @@ def build_side(tag, mirror):
     plate('Thigh panel', [(-0.08, -0.26), (0.11, -0.26), (0.13, -0.5), (0.07, -0.74), (-0.06, -0.74), (-0.1, -0.5)], 0.02, A2, th, (0, -0.258, 0), inset=0.008, bevel=0.004)
     plate('Thigh guard', [(-0.17, -0.52), (0.2, -0.47), (0.22, -0.76), (0.12, -0.9), (-0.11, -0.9), (-0.18, -0.74)], 0.05, A, th, (0, -0.25, 0), inset=0.018, bevel=0.01)
     seam(th, [(0.2, -0.28, -0.5), (0.215, -0.28, -0.74)], width=0.012)
+    for k in range(3):
+        box('Thigh stripe', (0.16, 0.012, 0.018), T, th, (0.02, -0.3, -0.58 - k * 0.04), bevel=0.002)
     marker(th, (0.03, -0.268, -0.18), 0.1, 0.03, (0, 0, 0))
     bolts(th, [(-0.1, -0.16), (0.12, -0.2), (0.15, -0.52), (-0.12, -0.52), (0.08, -0.8), (-0.07, -0.8)], -0.262, 0.012, T)
     gear('Hip Gear', 0.22, 20, 0.03, F, th, (-0.09, 0, 0), 'x')
@@ -570,6 +605,7 @@ def build_side(tag, mirror):
     plate('Shin guard', [(-0.17, -0.12), (0.17, -0.12), (0.22, -0.3), (0.12, -0.4), (0.0, -0.46), (-0.12, -0.4), (-0.22, -0.3)], 0.07, A, kn, (0, -0.23, 0), (-3, 0, 0), inset=0.022, bevel=0.012)
     beam('Shin V', (0.19, -0.265, -0.4), (0.0, -0.275, -0.68), 0.05, 0.035, T, kn, bevel=0.006)
     beam('Shin V', (-0.19, -0.265, -0.4), (0.0, -0.275, -0.68), 0.05, 0.035, T, kn, bevel=0.006)
+    box('Shin stripe', (0.2, 0.012, 0.02), G, kn, (0, -0.262, -0.3), bevel=0)
     box('Shin light', (0.07, 0.012, 0.022), G, kn, (0, -0.262, -0.78), bevel=0)
     marker(kn, (0, -0.258, -0.86), 0.03, 0.055)
     cyl('Calf drum', 0.06, 0.38, T, kn, (0, 0.08, -0.3), 'x', seg=32)
