@@ -174,6 +174,22 @@ export function buildFromBlender(rig, mats, gltf) {
   return attachWings(handles);
 }
 
+// The model file carries a soft contact shadow painted into every point (see tools/export_glb.py).
+// Turn it on for the painted metal, and give any mesh that has none a plain white one so
+// nothing that shares these materials turns black.
+export function useBakedShading(mats, scene) {
+  for (const mat of Object.values(mats)) {
+    if (mat.userData.glow) continue;
+    mat.vertexColors = true;
+    mat.needsUpdate = true;
+  }
+  scene.traverse((o) => {
+    if (!o.isMesh || !o.material.vertexColors || o.geometry.getAttribute('color')) return;
+    const n = o.geometry.getAttribute('position').count;
+    o.geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(n * 3).fill(1), 3));
+  });
+}
+
 // The Blender model already stands in his pose, so "Sentinel" is the rest pose.
 export function blenderForms(forms) {
   return { ...forms, sentinel: { ...forms.sentinel, joints: {}, params: { ...forms.sentinel.params, fanTop: 6, fanBottom: -80 } } };

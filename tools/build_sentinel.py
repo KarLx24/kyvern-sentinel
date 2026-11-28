@@ -191,39 +191,114 @@ def finish(name, bm, mat, parent, loc=(0, 0, 0), rot=(0, 0, 0), bevel=0.012, seg
         m.profile = 0.6
         m.limit_method = 'ANGLE'
         m.angle_limit = R(34)
-        w = ob.modifiers.new('Normals', 'WEIGHTED_NORMAL')
-        w.keep_sharp = True
+    w = ob.modifiers.new('Normals', 'WEIGHTED_NORMAL')
+    w.keep_sharp = True
     return ob
 
 
-def plate(name, pts, depth, mat, parent, loc=(0, 0, 0), rot=(0, 0, 0), inset=0.0, bevel=0.012):
-    """Polygon drawn in the X/Z plane, back at y=0, front face at y=-depth. `inset` chamfers the front."""
-    bm = bmesh.new()
-    cx = sum(p[0] for p in pts) / len(pts)
-    cz = sum(p[1] for p in pts) / len(pts)
-
-    def ins(p):
-        d = Vector((p[0] - cx, p[1] - cz))
-        ln = d.length
-        f = max(0.2, (ln - inset) / ln) if ln > 1e-6 else 1
-        return cx + d.x * f, cz + d.y * f
-
-    rings = [[bm.verts.new((x, 0, z)) for x, z in pts]]
-    if inset > 0:
-        rings.append([bm.verts.new((x, -depth * 0.5, z)) for x, z in pts])
-        rings.append([bm.verts.new((ins(p)[0], -depth, ins(p)[1])) for p in pts])
-    else:
-        rings.append([bm.verts.new((x, -depth, z)) for x, z in pts])
+def fillet(pts, r, seg=3):
+    """Round every corner of a polygon (convex or concave) with a small curve."""
+    out = []
     n = len(pts)
+    for i in range(n):
+        p, a, b = Vector(pts[i]), Vector(pts[i - 1]), Vector(pts[(i + 1) % n])
+        da, db = a - p, b - p
+        la, lb = da.length, db.length
+        if la < 1e-6 or lb < 1e-6 or abs(da.normalized().dot(db.normalized())) > 0.985:
+            out.append(tuple(p))
+            continue
+        t = min(r, 0.42 * la, 0.42 * lb)
+        s, e = p + da / la * t, p + db / lb * t
+        for k in range(seg + 1):
+            u = k / seg
+            q = s * (1 - u) ** 2 + p * 2 * u * (1 - u) + e * u ** 2
+            out.append((q.x, q.y))
+    return out
+
+
+def inradius(pts):
+    """Distance from the middle of a polygon to its nearest edge (0 if the middle falls outside)."""
+    c = Vector((sum(p[0] for p in pts) / len(pts), sum(p[1] for p in pts) / len(pts)))
+    best, inside = 1e9, False
+    n = len(pts)
+    for i in range(n):
+        a, b = Vector(pts[i]), Vector(pts[(i + 1) % n])
+        ab = b - a
+        u = max(0.0, min(1.0, (c - a).dot(ab) / max(ab.length_squared, 1e-12)))
+        best = min(best, (a + ab * u - c).length)
+        if (a.y > c.y) != (b.y > c.y) and c.x < a.x + (c.y - a.y) / (b.y - a.y) * (b.x - a.x):
+            inside = not inside
+    return best if inside else 0.0
+
+
+def offset(pts, dist):
+    """Move every edge of a polygon inward by `dist` (mitred corners)."""
+    n = len(pts)
+    area = sum(pts[i][0] * pts[(i + 1) % n][1] - pts[(i + 1) % n][0] * pts[i][1] for i in range(n))
+    sg = 1.0 if area > 0 else -1.0
+    out = []
+    for i in range(n):
+        p, a, b = Vector(pts[i]), Vector(pts[i - 1]), Vector(pts[(i + 1) % n])
+        d1, d2 = (p - a).normalized(), (b - p).normalized()
+        n1, n2 = Vector((-d1.y, d1.x)) * sg, Vector((-d2.y, d2.x)) * sg
+        q = p + (n1 + n2) / max(0.35, 1 + n1.dot(n2)) * dist
+        out.append((q.x, q.y))
+    return out
+
+
+def plate(name, pts, depth, mat, parent, loc=(0, 0, 0), rot=(0, 0, 0), inset=0.0, bevel=0.012, round=0.024, detail=True):
+    """Armour plate drawn in the X/Z plane, back at y=0, front face at y=-depth.
+    Corners are rounded, the front edge rolls over (`inset` is the radius), a panel line is cut
+    just inside the edge and the middle is crowned, so it catches light like pressed metal."""
+    if len(pts) > 16:
+        round = 0
+    e = min(inset if inset > 0 else 0.006, depth * 0.6)
+    steps = [(0.0, 0.0), (0.0, depth - e), (e * 0.13, depth - e * 0.5), (e * 0.5, depth - e * 0.13), (e, depth)]
+    inr = inradius(pts) - e
+    if detail and inr > 0.045:
+        g = 0.0045
+        m = e + max(0.012, min(0.045, inr * 0.26))
+        steps += [(m, depth), (m + g, depth - g), (m + g * 1.7, depth - g), (m + g * 2.7, depth)]
+        left = inr + e - m - g * 2.7
+        crown = min(0.022, depth * 0.22, inr * 0.16)
+        if left > 0.03:
+            steps += [(m + g * 2.7 + left * 0.3, depth + crown * 0.6), (m + g * 2.7 + left * 0.62, depth + crown)]
+    bm = bmesh.new()
+    rings = []
+    for d, y in steps:
+        ring = offset(pts, d) if d > 0 else list(pts)
+        if round > 0:
+            ring = fillet(ring, max(0.004, round - d * 0.6))
+        rings.append([bm.verts.new((x, -y, z)) for x, z in ring])
+    n = len(rings[0])
     for a, b in zip(rings, rings[1:]):
         for i in range(n):
             bm.faces.new((a[i], a[(i + 1) % n], b[(i + 1) % n], b[i]))
     bm.faces.new(rings[0])
     bm.faces.new(rings[-1])
-    return finish(name, bm, mat, parent, loc, rot, bevel)
+    return finish(name, bm, mat, parent, loc, rot, 0)
 
 
 def box(name, dims, mat, parent, loc=(0, 0, 0), rot=(0, 0, 0), bevel=0.01):
+    """Block. A thin slab is built as an armour plate (rounded, panel line, crowned) facing outward."""
+    thin = min(range(3), key=lambda i: dims[i])
+    wide = [dims[i] for i in range(3) if i != thin]
+    if bevel >= 0.006 and dims[thin] < 0.34 * min(wide) and min(wide) > 0.15:
+        d = dims[thin]
+        w, h = (dims[0], dims[2]) if thin == 1 else (dims[1], dims[2]) if thin == 0 else (dims[0], dims[1])
+        ob = plate(name, [(-w / 2, -h / 2), (w / 2, -h / 2), (w / 2, h / 2), (-w / 2, h / 2)], d, mat, parent,
+                   inset=min(bevel * 1.4, d * 0.45), round=min(0.04, 0.22 * min(w, h)))
+        out = loc[thin] >= 0
+        if thin == 1:
+            m = Matrix.Translation((0, -d / 2, 0)) @ Matrix.Rotation(R(180), 4, 'Z') if out else Matrix.Translation((0, d / 2, 0))
+        elif thin == 0:
+            m = Matrix.Translation((-d / 2, 0, 0)) @ Matrix.Rotation(R(90), 4, 'Z') if out else Matrix.Translation((d / 2, 0, 0)) @ Matrix.Rotation(R(-90), 4, 'Z')
+        else:
+            m = Matrix.Translation((0, 0, -d / 2)) @ Matrix.Rotation(R(-90), 4, 'X') if out else Matrix.Translation((0, 0, d / 2)) @ Matrix.Rotation(R(90), 4, 'X')
+        ob.data.transform(m)
+        ob.location = loc
+        ob.rotation_euler = [R(a) for a in rot]
+        return ob
     bm = bmesh.new()
     bmesh.ops.create_cube(bm, size=1.0)
     bmesh.ops.scale(bm, vec=dims, verts=bm.verts[:])
@@ -262,21 +337,73 @@ def torus(name, rad, tube, mat, parent, loc=(0, 0, 0), axis='y', rot=(0, 0, 0), 
     return finish(name, bm, mat, parent, loc, rot, bevel=0)
 
 
-def loft(name, secs, mat, parent, loc=(0, 0, 0), rot=(0, 0, 0), bevel=0.012):
-    """Stack of chamfered-rectangle cross sections: dict(z, w, d, c, x=0, y=0)."""
+def _ring(w, d, c, arc=4, crown=0.03):
+    """Rounded rectangle with slightly bowed sides, counter-clockwise, 28 points."""
+    hw, hd = w / 2, d / 2
+    r = max(0.004, min(c * 1.7, hw * 0.92, hd * 0.92))
+    out = []
+    corners = ((hw - r, -hd + r, -90), (hw - r, hd - r, 0), (-hw + r, hd - r, 90), (-hw + r, -hd + r, 180))
+    sides = ((1, 0, hd - r), (0, 1, hw - r), (-1, 0, hd - r), (0, -1, hw - r))  # outward normal of the side after each corner
+    for (cx, cy, a0), (nx, ny, half) in zip(corners, sides):
+        for k in range(arc + 1):
+            a = R(a0 + 90 * k / arc)
+            out.append((cx + r * math.cos(a), cy + r * math.sin(a)))
+        for u in (-0.34, 0.34):  # two points along the side, pushed out a little
+            bow = crown * half * 2 * (1 - (u * 2) ** 2 * 0.6)
+            px = (hw if nx > 0 else -hw if nx < 0 else -u * 2 * half * ny) + nx * bow
+            py = (hd if ny > 0 else -hd if ny < 0 else u * 2 * half * nx) + ny * bow
+            out.append((px, py))
+    return out
+
+
+def loft(name, secs, mat, parent, loc=(0, 0, 0), rot=(0, 0, 0), bevel=0.012, lines=None, sub=5):
+    """Armour shell: a smooth curve through rounded cross sections dict(z, w, d, c, x=0, y=0).
+    `lines` are panel lines cut around it, as fractions of its length (default: one, if long enough)."""
+    keys = ('z', 'w', 'd', 'c', 'x', 'y')
+    P = [[s.get(k, 0.04 if k == 'c' else 0.0) for k in keys] for s in secs]
+    span = abs(P[-1][0] - P[0][0])
+    if lines is None:
+        lines = (0.34,) if span > 0.42 else ()
+
+    def at(t):  # Catmull-Rom through the sections, t in 0..len-1
+        i = min(int(t), len(P) - 2)
+        u = t - i
+        p0, p1, p2, p3 = P[max(i - 1, 0)], P[i], P[i + 1], P[min(i + 2, len(P) - 1)]
+        return [0.5 * ((2 * b) + (-a + c) * u + (2 * a - 5 * b + 4 * c - d) * u * u + (-a + 3 * b - 3 * c + d) * u ** 3) for a, b, c, d in zip(p0, p1, p2, p3)]
+
+    ts = [k / sub for k in range((len(P) - 1) * sub + 1)]
+    samples = [at(t) for t in ts]
+    for f in lines:  # a panel line is three close rings, the middle one sunk
+        t = f * (len(P) - 1)
+        dt = 0.006 / max(span, 1e-3) * (len(P) - 1)
+        lo, mid, hi = at(t - dt), at(t), at(t + dt)
+        mid[1] -= 0.011
+        mid[2] -= 0.011
+        samples = [s for s, tt in zip(samples, ts) if abs(tt - t) > dt * 2.2] + [lo, mid, hi]
+        ts = [tt for tt in ts if abs(tt - t) > dt * 2.2] + [t - dt, t, t + dt]
+        order = sorted(range(len(ts)), key=lambda k: ts[k])
+        samples, ts = [samples[k] for k in order], [ts[k] for k in order]
+    # roll the two open ends over so the shell has no knife edge
+    e = min(0.014, bevel) if bevel > 0 else 0.0
+    if e > 0:
+        dirz = 1.0 if samples[-1][0] > samples[0][0] else -1.0
+        a, b = list(samples[0]), list(samples[-1])
+        for s, sg in ((a, -1), (b, 1)):
+            s[0] += sg * dirz * e
+            s[1] = max(0.01, s[1] - 2 * e)
+            s[2] = max(0.01, s[2] - 2 * e)
+        samples = [a] + samples + [b]
     bm = bmesh.new()
     rings = []
-    for s in secs:
-        w, d, c = s['w'] / 2, s['d'] / 2, s.get('c', 0.04)
-        x0, y0, z = s.get('x', 0), s.get('y', 0), s['z']
-        pts = [(w - c, -d), (w, -d + c), (w, d - c), (w - c, d), (-w + c, d), (-w, d - c), (-w, -d + c), (-w + c, -d)]
-        rings.append([bm.verts.new((x0 + px, y0 + py, z)) for px, py in pts])
+    for z, w, d, c, x0, y0 in samples:
+        rings.append([bm.verts.new((x0 + px, y0 + py, z)) for px, py in _ring(max(w, 0.01), max(d, 0.01), max(c, 0.004))])
+    m = len(rings[0])
     for a, b in zip(rings, rings[1:]):
-        for i in range(8):
-            bm.faces.new((a[i], a[(i + 1) % 8], b[(i + 1) % 8], b[i]))
+        for i in range(m):
+            bm.faces.new((a[i], a[(i + 1) % m], b[(i + 1) % m], b[i]))
     bm.faces.new(rings[0])
     bm.faces.new(rings[-1])
-    return finish(name, bm, mat, parent, loc, rot, bevel)
+    return finish(name, bm, mat, parent, loc, rot, 0)
 
 
 def beam(name, a, b, width, depth, mat, parent, bevel=0.003):
@@ -347,7 +474,7 @@ def gear(name, r, teeth, depth, mat, parent, loc, axis='x'):
         a = 2 * math.pi * i / (teeth * 4)
         rr = r if i % 4 < 2 else r * 0.82
         pts.append((rr * math.cos(a), rr * math.sin(a)))
-    return plate(name, pts, depth, mat, parent, loc, (0, 0, 90) if axis == 'x' else (0, 0, 0), bevel=0.003)
+    return plate(name, pts, depth, mat, parent, loc, (0, 0, 90) if axis == 'x' else (0, 0, 0), bevel=0.003, round=0, detail=False)
 
 
 def hose(name, parent, pts, r=0.016, mat=None):

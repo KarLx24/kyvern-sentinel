@@ -10,7 +10,7 @@ import { Tour } from './framework/tour.js';
 import { Hud } from './framework/hud.js';
 import { loadPartModels } from './framework/partmodels.js';
 import { buildSentinel, SECTIONS } from './sentinel/model.js';
-import { loadBlenderSentinel, buildFromBlender, blenderForms } from './sentinel/blender.js';
+import { loadBlenderSentinel, buildFromBlender, blenderForms, useBakedShading } from './sentinel/blender.js';
 import { buildEffects } from './sentinel/effects.js';
 import { ROLES, LINES, FORMS, STATES, STATE_ALIAS, CHAPTERS, SPEC } from './sentinel/config.js';
 
@@ -43,6 +43,7 @@ const walker = new Walker(rig, forms);
 const behaviour = new Behaviour(forms);
 stage.scene.add(rig.root);
 const effects = buildEffects({ rig, stage, paint, forms, behaviour });
+if (gltf) useBakedShading(paint.mats, stage.scene);
 
 const chapters = CHAPTERS.map((c) => {
   const s = SECTIONS.find((x) => x.id === c.section);
