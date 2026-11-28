@@ -20,7 +20,7 @@ const CENTRE = [
   { id: 'abdomen', node: 'abdomen', parent: 'pelvis', label: 'Abdomen', section: 'torso', explode: [0, 0.26, 0], note: 'Waist joint with sliding plates.' },
   { id: 'chest', node: 'chest', parent: 'abdomen', label: 'Chest', section: 'torso', explode: [0, 0.3, 0], note: 'Rib cage, pectoral plates and the back pack.' },
   { id: 'core', node: 'core', parent: 'chest', label: 'Core', section: 'core', explode: [0, 0, 0.7], note: 'Reactor. Its light changes with what Kyvern is doing.' },
-  { id: 'helm', node: 'helm', parent: 'chest', label: 'Helm', section: 'helm', explode: [0, 0.45, 0], note: 'Head. The visor follows whoever he is looking at.' },
+  { id: 'helm', node: 'helm', parent: 'chest', label: 'Helm', section: 'helm', explode: [0, 0.45, 0], note: 'Head. Two eyes under a V brow, a three-blade crown and swept temple fins.' },
 ];
 const SIDE = [
   { id: 'shoulder', parent: 'chest', label: 'Shoulder', section: 'shoulders', explode: [0.5, 0.12, 0], note: 'Ball joint that carries the arm.' },
@@ -172,6 +172,22 @@ export function buildFromBlender(rig, mats, gltf) {
   });
   handles.hip = rig.tilt.position.y;
   return attachWings(handles);
+}
+
+// The model file carries a soft contact shadow painted into every point (see tools/export_glb.py).
+// Turn it on for the painted metal, and give any mesh that has none a plain white one so
+// nothing that shares these materials turns black.
+export function useBakedShading(mats, scene) {
+  for (const mat of Object.values(mats)) {
+    if (mat.userData.glow) continue;
+    mat.vertexColors = true;
+    mat.needsUpdate = true;
+  }
+  scene.traverse((o) => {
+    if (!o.isMesh || !o.material.vertexColors || o.geometry.getAttribute('color')) return;
+    const n = o.geometry.getAttribute('position').count;
+    o.geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(n * 3).fill(1), 3));
+  });
 }
 
 // The Blender model already stands in his pose, so "Sentinel" is the rest pose.

@@ -83,7 +83,11 @@ export class Paint {
           `#include <color_fragment>
           float swS = length(vSwp - uSwOrigin);
           float swK = 1.0 - smoothstep(uSweep - 0.03, uSweep + 0.03, swS);
-          diffuseColor.rgb = mix(diffuseColor.rgb, uToColor, swK);
+          vec3 swTo = uToColor;
+          #ifdef USE_COLOR
+            swTo *= vColor.rgb; // keep the model's painted shading under the new colour
+          #endif
+          diffuseColor.rgb = mix(diffuseColor.rgb, swTo, swK);
           #if ${mat.userData.glow ? 0 : 1}
             if (uGrid > 0.001) {
               float gEdge = smoothstep(0.1, 0.55, length(fwidth(normalize(vNormal))) * 2.4);
