@@ -5,6 +5,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 
 const damp = (cur, target, rate, dt) => cur + (target - cur) * (1 - Math.exp(-rate * dt));
 
@@ -77,6 +78,15 @@ export class Stage {
 
     this.composer = new EffectComposer(renderer);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
+    // contact shadow where plates meet and overlap, so the armour reads as layered metal.
+    // It is heavy, so it is off unless the address has ?ao=1.
+    this.aoWanted = new URLSearchParams(location.search).get('ao') === '1';
+    this.ao = new GTAOPass(this.scene, this.camera, 1, 1);
+    this.ao.blendIntensity = 1;
+    this.ao.updateGtaoMaterial({ radius: 0.42, distanceExponent: 1.4, thickness: 1.2, scale: 1.25, samples: 12 });
+    this.ao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, rings: 2, samples: 12 });
+    this.ao.enabled = this.aoWanted;
+    this.composer.addPass(this.ao);
     this.bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.16, 0.45, 1.35);
     this.composer.addPass(this.bloom);
     this.composer.addPass(new OutputPass());
@@ -133,6 +143,12 @@ export class Stage {
     panel(1.2, 8, '#ffffff', 6, [-7, 4, 9]);
     panel(1.2, 8, '#ffffff', 5, [8, 5, 8]);
     panel(14, 1.2, t.rimCool, 3, [0, 0.4, -12]);
+    // thin strip lights: they draw long bright streaks along the curved armour
+    panel(0.35, 9, '#ffffff', 9, [-4.5, 5, 11]);
+    panel(0.35, 9, '#ffffff', 8, [5, 5, 11.5]);
+    panel(10, 0.3, '#ffffff', 8, [0, 8.5, 9]);
+    panel(0.4, 7, t.rimWarm, 6, [12, 4, 3]);
+    panel(0.4, 7, t.rimCool, 5, [-12, 4, 2]);
     const pmrem = new THREE.PMREMGenerator(this.renderer);
     this.scene.environment = pmrem.fromScene(env, 0.03).texture;
     pmrem.dispose();
@@ -338,6 +354,7 @@ export class Stage {
   setQuality(q) {
     this.quality = q;
     this.bloom.enabled = q >= 3;
+    this.ao.enabled = this.aoWanted && q >= 3;
     this.renderer.shadowMap.enabled = q >= 2;
     this.key.castShadow = q >= 2;
     if (q < 3) this.pixelRatio = Math.min(this.pixelRatio, 1.25);

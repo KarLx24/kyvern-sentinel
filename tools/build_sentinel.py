@@ -323,6 +323,10 @@ AXIS = {'z': Matrix.Identity(4), 'x': Matrix.Rotation(R(90), 4, 'Y'), 'y': Matri
 def cyl(name, r, length, mat, parent, loc=(0, 0, 0), axis='z', rot=(0, 0, 0), seg=40, r2=None, bevel=0.008):
     bm = bmesh.new()
     bmesh.ops.create_cone(bm, cap_ends=True, segments=seg, radius1=r, radius2=r if r2 is None else r2, depth=length, matrix=AXIS[axis])
+    if name.endswith('piston'):  # a rod gets a gland collar near each end and a clevis block at the tip
+        for k in (-0.4, 0.4):
+            bmesh.ops.create_cone(bm, cap_ends=True, segments=seg, radius1=r * 1.75, radius2=r * 1.75, depth=r * 1.3, matrix=AXIS[axis] @ Matrix.Translation((0, 0, length * k)))
+        bmesh.ops.create_cone(bm, cap_ends=True, segments=6, radius1=r * 1.4, radius2=r * 1.4, depth=r * 2.2, matrix=AXIS[axis] @ Matrix.Translation((0, 0, -length * 0.49)))
     return finish(name, bm, mat, parent, loc, rot, bevel)
 
 
@@ -451,6 +455,21 @@ def joint(name, parent, loc, r, length, axis='x'):
     cyl(name + ' inner', r * 0.66, length * 1.12, F, parent, loc, axis, seg=40)
     cyl(name + ' hub', r * 0.36, length * 1.22, T, parent, loc, axis, seg=32)
     cyl(name + ' bolt', r * 0.16, length * 1.3, F, parent, loc, axis, seg=6, bevel=0.003)
+    # two dark grooves around the drum and a ring of cap bolts on each end
+    ax = 'xyz'.index(axis)
+    for k in (-0.26, 0.26):
+        p = list(loc)
+        p[ax] += length * k
+        torus(name + ' rim', r * 1.0, 0.007, F, parent, tuple(p), axis, seg=40, tseg=6)
+    u, v = [i for i in range(3) if i != ax]
+    for end in (-1, 1):
+        for i in range(8):
+            a = 2 * math.pi * (i + 0.5) / 8
+            p = list(loc)
+            p[ax] += end * length * 0.5
+            p[u] += r * 0.82 * math.cos(a)
+            p[v] += r * 0.82 * math.sin(a)
+            cyl('Bolt', r * 0.07, 0.014, F, parent, tuple(p), axis, seg=6, bevel=0)['anchor'] = tuple(loc)
 
 
 def bolts(parent, pts, y, r=0.012, mat=None):
@@ -463,6 +482,11 @@ def stretch(emp, fz, fxy=1.0, keep=('drum', 'inner', 'hub', 'bolt', 'Bolt', 'rim
     Joint drums, bolts and markers keep their shape and only move."""
     for ob in emp.children:
         if ob.type != 'MESH':
+            continue
+        if 'anchor' in ob.keys():  # rides with its joint: move the joint's centre, keep the offset from it
+            a = Vector(ob['anchor'])
+            off = ob.location - a
+            ob.location = Vector((a.x * fxy, a.y * fxy, a.z * fz)) + off
             continue
         if any(k in ob.name for k in keep):
             ob.location.z *= fz
@@ -624,14 +648,37 @@ loft('Skull', [dict(z=0.1, w=0.25, d=0.3, c=0.07, y=0.02), dict(z=0.24, w=0.33, 
 plate('Face', [(-0.128, 0.238), (0.128, 0.238), (0.092, 0.105), (0.045, 0.05), (-0.045, 0.05), (-0.092, 0.105)], 0.05, A2, helm, (0, -0.152, 0), (-3, 0, 0), inset=0.02, detail=False)
 plate('Brow', [(-0.158, 0.39), (0.0, 0.352), (0.158, 0.39), (0.152, 0.322), (0.0, 0.29), (-0.152, 0.322)], 0.06, A, helm, (0, -0.178, 0.0), (-9, 0, 0), inset=0.016, round=0.012, detail=False)
 plate('Nose', [(-0.016, 0.3), (0.016, 0.3), (0.028, 0.205), (0.0, 0.19), (-0.028, 0.205)], 0.034, A2, helm, (0, -0.198, 0), (-5, 0, 0), inset=0.012, round=0.008, detail=False)
-# jaw: a centre keel with two layered plates each side and vent slots, instead of a mouth
-plate('Jaw keel', [(-0.026, 0.192), (0.026, 0.192), (0.04, 0.1), (0.0, 0.03), (-0.04, 0.1)], 0.056, A, helm, (0, -0.196, 0), (3, 0, 0), inset=0.014, round=0.008, detail=False)
-box('Keel light', (0.008, 0.012, 0.075), G, helm, (0, -0.256, 0.128), (3, 0, 0), bevel=0)
-for s in (1, -1):
-    plate('Jaw plate', mx([(0.03, 0.19), (0.092, 0.178), (0.086, 0.112), (0.046, 0.066)], s), 0.04, A2, helm, (0, -0.194, 0), (2, s * 16, 0), inset=0.012, round=0.008, detail=False)
-    plate('Jaw strake', mx([(0.05, 0.1), (0.1, 0.125), (0.094, 0.085), (0.058, 0.05)], s), 0.03, A, helm, (0, -0.19, 0), (6, s * 24, 0), inset=0.008, round=0.006, detail=False)
-    for k in range(3):
-        box('Jaw vent', (0.034, 0.012, 0.007), F, helm, (s * 0.058, -0.2385 + 0.0, 0.166 - k * 0.019), (2, s * 16, s * -8), bevel=0)
+MOUTH = os.environ.get('MOUTH', 'A')  # which mouth design to build
+if MOUTH == 'A':
+    # jaw: a centre keel with two layered plates each side and vent slots, instead of a mouth
+    plate('Jaw keel', [(-0.026, 0.192), (0.026, 0.192), (0.04, 0.1), (0.0, 0.03), (-0.04, 0.1)], 0.056, A, helm, (0, -0.196, 0), (3, 0, 0), inset=0.014, round=0.008, detail=False)
+    box('Keel light', (0.008, 0.012, 0.075), G, helm, (0, -0.256, 0.128), (3, 0, 0), bevel=0)
+    for s in (1, -1):
+        plate('Jaw plate', mx([(0.03, 0.19), (0.092, 0.178), (0.086, 0.112), (0.046, 0.066)], s), 0.04, A2, helm, (0, -0.194, 0), (2, s * 16, 0), inset=0.012, round=0.008, detail=False)
+        plate('Jaw strake', mx([(0.05, 0.1), (0.1, 0.125), (0.094, 0.085), (0.058, 0.05)], s), 0.03, A, helm, (0, -0.19, 0), (6, s * 24, 0), inset=0.008, round=0.006, detail=False)
+        for k in range(3):
+            box('Jaw vent', (0.034, 0.012, 0.007), F, helm, (s * 0.058, -0.2385 + 0.0, 0.166 - k * 0.019), (2, s * 16, s * -8), bevel=0)
+elif MOUTH == 'B':
+    # battle mask: one smooth plate with a bronze centre ridge and two lit slits each side
+    plate('Battle mask', [(-0.092, 0.2), (0.092, 0.2), (0.086, 0.11), (0.04, 0.04), (-0.04, 0.04), (-0.086, 0.11)], 0.052, A, helm, (0, -0.196, 0), (3, 0, 0), inset=0.02, round=0.012, detail=False)
+    plate('Mask ridge', [(-0.009, 0.2), (0.009, 0.2), (0.015, 0.05), (-0.015, 0.05)], 0.064, T, helm, (0, -0.196, 0), (3, 0, 0), inset=0.008, round=0.004, detail=False)
+    for s in (1, -1):
+        for k in range(2):
+            box('Mask light', (0.04, 0.012, 0.007), G, helm, (s * 0.05, -0.2475, 0.15 - k * 0.028), (3, 0, s * -18), bevel=0)
+elif MOUTH == 'C':
+    # grille: four louvre bars that narrow toward the chin, with a strut each side
+    for k in range(4):
+        w, z = 0.088 - k * 0.015, 0.178 - k * 0.036
+        plate('Grille bar %d' % (k + 1), [(-w, z + 0.013), (w, z + 0.013), (w - 0.01, z - 0.013), (-w + 0.01, z - 0.013)], 0.05 - k * 0.004, A2 if k % 2 else A, helm, (0, -0.194, 0), (10, 0, 0), inset=0.008, round=0.005, detail=False)
+    box('Grille glow', (0.11, 0.01, 0.12), G, helm, (0, -0.2, 0.125), bevel=0)
+    for s in (1, -1):
+        plate('Grille strut', mx([(0.088, 0.2), (0.108, 0.195), (0.07, 0.04), (0.05, 0.05)], s), 0.05, A, helm, (0, -0.194, 0), (3, s * 10, 0), inset=0.008, round=0.005, detail=False)
+else:
+    # mandibles: two jaw halves that meet over a lit seam, ending in a pointed chin
+    box('Jaw seam light', (0.012, 0.012, 0.14), G, helm, (0, -0.226, 0.125), (3, 0, 0), bevel=0)
+    for s in (1, -1):
+        plate('Mandible', mx([(0.008, 0.195), (0.092, 0.182), (0.084, 0.105), (0.03, 0.035), (0.008, 0.06)], s), 0.054, A, helm, (0, -0.194, 0), (3, s * 13, 0), inset=0.016, round=0.01, detail=False)
+        plate('Mandible plate', mx([(0.03, 0.17), (0.075, 0.162), (0.068, 0.115), (0.034, 0.09)], s), 0.012, A2, helm, (0, -0.25, 0), (3, s * 13, 0), inset=0.005, round=0.005, detail=False)
 for s in (1, -1):
     plate('Eye socket', mx([(0.0, 0.33), (0.15, 0.34), (0.15, 0.225), (0.0, 0.225)], s), 0.014, VIS, helm, (0, -0.166, 0), (-3, 0, 0), bevel=0.003, round=0.006, detail=False)
     plate('Eye light', mx([(0.036, 0.266), (0.112, 0.3), (0.12, 0.268), (0.042, 0.244)], s), 0.008, G, helm, (0, -0.179, 0), (-3, 0, 0), bevel=0, round=0.004, detail=False)
