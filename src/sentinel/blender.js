@@ -186,7 +186,7 @@ export function useBakedShading(mats, scene) {
   scene.traverse((o) => {
     if (!o.isMesh || !o.material.vertexColors || o.geometry.getAttribute('color')) return;
     const n = o.geometry.getAttribute('position').count;
-    o.geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(n * 3).fill(1), 3));
+    o.geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(n * 4).fill(1), 4));
   });
 }
 

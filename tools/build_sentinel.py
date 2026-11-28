@@ -275,13 +275,17 @@ def plate(name, pts, depth, mat, parent, loc=(0, 0, 0), rot=(0, 0, 0), inset=0.0
         if left > 0.03:
             steps += [(m + g * 2.7 + left * 0.3, depth + crown * 0.6), (m + g * 2.7 + left * 0.62, depth + crown)]
     bm = bmesh.new()
+    line = bm.verts.layers.float.new('line')  # 1 on the panel line: it lights up in the light-line form
     rings = []
     mask = corners(pts)
-    for d, y in steps:
+    for k, (d, y) in enumerate(steps):
         ring = offset(pts, d) if d > 0 else list(pts)
         if round > 0:
             ring = fillet(ring, max(0.004, round - d * 0.6), mask=mask)
         rings.append([bm.verts.new((x, -y, z)) for x, z in ring])
+        if len(steps) > 5 and k in (6, 7):
+            for v in rings[-1]:
+                v[line] = 1.0
     n = len(rings[0])
     for a, b in zip(rings, rings[1:]):
         for i in range(n):
@@ -395,6 +399,7 @@ def loft(name, secs, mat, parent, loc=(0, 0, 0), rot=(0, 0, 0), bevel=0.012, lin
         lo, mid, hi = at(t - dt), at(t), at(t + dt)
         mid[1] -= 0.011
         mid[2] -= 0.011
+        mid.append('line')
         samples = [s for s, tt in zip(samples, ts) if abs(tt - t) > dt * 2.2] + [lo, mid, hi]
         ts = [tt for tt in ts if abs(tt - t) > dt * 2.2] + [t - dt, t, t + dt]
         order = sorted(range(len(ts)), key=lambda k: ts[k])
@@ -410,9 +415,14 @@ def loft(name, secs, mat, parent, loc=(0, 0, 0), rot=(0, 0, 0), bevel=0.012, lin
             s[2] = max(0.01, s[2] - 2 * e)
         samples = [a] + samples + [b]
     bm = bmesh.new()
+    line = bm.verts.layers.float.new('line')
     rings = []
-    for z, w, d, c, x0, y0 in samples:
+    for smp in samples:
+        z, w, d, c, x0, y0 = smp[:6]
         rings.append([bm.verts.new((x0 + px, y0 + py, z)) for px, py in _ring(max(w, 0.01), max(d, 0.01), max(c, 0.004))])
+        if len(smp) > 6:
+            for v in rings[-1]:
+                v[line] = 1.0
     m = len(rings[0])
     for a, b in zip(rings, rings[1:]):
         for i in range(m):
