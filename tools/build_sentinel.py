@@ -621,15 +621,23 @@ for z in (-0.04, 0.03, 0.1):
 # The face is Kyvern's own: two angled eyes under a V brow, a nose ridge, cheek plates, a mouth and
 # chin, a three-blade crown (the Kyvern mark) and swept-back wing fins at the temples.
 loft('Skull', [dict(z=0.1, w=0.25, d=0.3, c=0.07, y=0.02), dict(z=0.24, w=0.33, d=0.38, c=0.1, y=0.02), dict(z=0.42, w=0.335, d=0.41, c=0.13, y=0.035), dict(z=0.53, w=0.25, d=0.34, c=0.11, y=0.06), dict(z=0.575, w=0.12, d=0.2, c=0.05, y=0.08)], A, helm, bevel=0.02, lines=())
-plate('Face', [(-0.112, 0.345), (0.112, 0.345), (0.128, 0.235), (0.092, 0.105), (0.045, 0.05), (-0.045, 0.05), (-0.092, 0.105), (-0.128, 0.235)], 0.05, A2, helm, (0, -0.152, 0), (-3, 0, 0), inset=0.02, detail=False)
+plate('Face', [(-0.128, 0.238), (0.128, 0.238), (0.092, 0.105), (0.045, 0.05), (-0.045, 0.05), (-0.092, 0.105)], 0.05, A2, helm, (0, -0.152, 0), (-3, 0, 0), inset=0.02, detail=False)
 plate('Brow', [(-0.158, 0.39), (0.0, 0.352), (0.158, 0.39), (0.152, 0.322), (0.0, 0.29), (-0.152, 0.322)], 0.06, A, helm, (0, -0.178, 0.0), (-9, 0, 0), inset=0.016, round=0.012, detail=False)
 plate('Nose', [(-0.016, 0.3), (0.016, 0.3), (0.028, 0.205), (0.0, 0.19), (-0.028, 0.205)], 0.034, A2, helm, (0, -0.198, 0), (-5, 0, 0), inset=0.012, round=0.008, detail=False)
-plate('Upper lip', [(-0.05, 0.185), (0.05, 0.185), (0.062, 0.148), (-0.062, 0.148)], 0.03, A2, helm, (0, -0.198, 0), (2, 0, 0), inset=0.01, round=0.008, detail=False)
-box('Mouth', (0.1, 0.02, 0.03), F, helm, (0, -0.205, 0.135), bevel=0.003)
-plate('Chin', [(-0.06, 0.122), (0.06, 0.122), (0.046, 0.052), (0.0, 0.036), (-0.046, 0.052)], 0.045, A, helm, (0, -0.196, 0), (5, 0, 0), inset=0.014, round=0.01, detail=False)
+# jaw: a centre keel with two layered plates each side and vent slots, instead of a mouth
+plate('Jaw keel', [(-0.026, 0.192), (0.026, 0.192), (0.04, 0.1), (0.0, 0.03), (-0.04, 0.1)], 0.056, A, helm, (0, -0.196, 0), (3, 0, 0), inset=0.014, round=0.008, detail=False)
+box('Keel light', (0.008, 0.012, 0.075), G, helm, (0, -0.256, 0.128), (3, 0, 0), bevel=0)
 for s in (1, -1):
-    plate('Eye socket', mx([(0.022, 0.302), (0.126, 0.318), (0.13, 0.25), (0.03, 0.228)], s), 0.012, VIS, helm, (0, -0.2, 0), (-3, 0, 0), bevel=0.003, round=0.006, detail=False)
-    plate('Eye light', mx([(0.034, 0.262), (0.112, 0.296), (0.118, 0.27), (0.04, 0.244)], s), 0.01, G, helm, (0, -0.212, 0), (-3, 0, 0), bevel=0, round=0.004, detail=False)
+    plate('Jaw plate', mx([(0.03, 0.19), (0.092, 0.178), (0.086, 0.112), (0.046, 0.066)], s), 0.04, A2, helm, (0, -0.194, 0), (2, s * 16, 0), inset=0.012, round=0.008, detail=False)
+    plate('Jaw strake', mx([(0.05, 0.1), (0.1, 0.125), (0.094, 0.085), (0.058, 0.05)], s), 0.03, A, helm, (0, -0.19, 0), (6, s * 24, 0), inset=0.008, round=0.006, detail=False)
+    for k in range(3):
+        box('Jaw vent', (0.034, 0.012, 0.007), F, helm, (s * 0.058, -0.2385 + 0.0, 0.166 - k * 0.019), (2, s * 16, s * -8), bevel=0)
+for s in (1, -1):
+    plate('Eye socket', mx([(0.0, 0.33), (0.15, 0.34), (0.15, 0.225), (0.0, 0.225)], s), 0.014, VIS, helm, (0, -0.166, 0), (-3, 0, 0), bevel=0.003, round=0.006, detail=False)
+    plate('Eye light', mx([(0.036, 0.266), (0.112, 0.3), (0.12, 0.268), (0.042, 0.244)], s), 0.008, G, helm, (0, -0.179, 0), (-3, 0, 0), bevel=0, round=0.004, detail=False)
+    plate('Eye rim', mx([(0.028, 0.24), (0.128, 0.262), (0.132, 0.232), (0.034, 0.212)], s), 0.024, A, helm, (0, -0.19, 0), (-3, 0, 0), inset=0.008, round=0.006, detail=False)
+    plate('Temple plate', mx([(0.118, 0.34), (0.15, 0.345), (0.152, 0.235), (0.126, 0.24)], s), 0.03, A, helm, (0, -0.178, 0), (-3, 0, 0), inset=0.008, round=0.006, detail=False)
+    plate('Skull plate', mx([(-0.11, 0.41), (0.1, 0.47), (0.2, 0.37), (0.17, 0.2), (-0.07, 0.21)], s), 0.022, A2, helm, (s * 0.158, 0.03, 0.0), (0, 0, s * 90), inset=0.008, round=0.02)
     plate('Cheek', mx([(0.045, 0.222), (0.128, 0.238), (0.1, 0.118), (0.062, 0.096)], s), 0.028, A, helm, (0, -0.196, 0), (-2, s * 10, 0), inset=0.01, round=0.01, detail=False)
     # crown: three blades rising from the brow, the outer two swept outward
     plate('Crown blade', mx([(0.04, 0.385), (0.1, 0.4), (0.19, 0.56), (0.085, 0.455)], s), 0.03, T, helm, (0, -0.2, 0.0), (-7, 0, 0), inset=0.008, round=0.006, detail=False)
@@ -642,6 +650,8 @@ for s in (1, -1):
         plate('Temple fin %d' % (k + 1), mx(fin, s), 0.018, A2 if k % 2 else A, helm, (s * (0.2 + k * 0.012), 0.03, 0.31 - k * 0.062), (0, 0, s * 90), inset=0.006, round=0.006, detail=False)
     plate('Jaw guard', mx([(-0.11, 0.09), (0.1, 0.07), (0.12, -0.02), (0.02, -0.09), (-0.1, -0.03)], s), 0.03, A, helm, (s * 0.155, -0.05, 0.17), (0, s * -6, s * 76), inset=0.01, round=0.012, detail=False)
 plate('Crown blade', [(0.0, 0.37), (0.045, 0.44), (0.0, 0.64), (-0.045, 0.44)], 0.036, T, helm, (0, -0.205, 0.0), (-7, 0, 0), inset=0.01, round=0.006, detail=False)
+ridge = [(-0.17, 0.5), (-0.1, 0.585), (0.04, 0.625), (0.17, 0.6), (0.27, 0.5), (0.3, 0.36), (0.24, 0.36), (0.2, 0.5), (0.12, 0.56), (0.02, 0.575), (-0.1, 0.53)]
+plate('Skull ridge', ridge, 0.05, A2, helm, (-0.025, 0.03, 0.0), (0, 0, 90), inset=0.014, round=0.012, detail=False)
 plate('Crown light', [(0.0, 0.405), (0.013, 0.45), (0.0, 0.53), (-0.013, 0.45)], 0.041, G, helm, (0, -0.205, 0.0), (-7, 0, 0), round=0, detail=False)
 
 
