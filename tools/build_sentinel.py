@@ -645,47 +645,51 @@ for z in (-0.04, 0.03, 0.1):
 # The face is Kyvern's own: two angled eyes under a V brow, a nose ridge, cheek plates, a mouth and
 # chin, a three-blade crown (the Kyvern mark) and swept-back wing fins at the temples.
 loft('Skull', [dict(z=0.1, w=0.25, d=0.3, c=0.07, y=0.02), dict(z=0.24, w=0.33, d=0.38, c=0.1, y=0.02), dict(z=0.42, w=0.335, d=0.41, c=0.13, y=0.035), dict(z=0.53, w=0.25, d=0.34, c=0.11, y=0.06), dict(z=0.575, w=0.12, d=0.2, c=0.05, y=0.08)], A, helm, bevel=0.02, lines=())
-plate('Face', [(-0.128, 0.238), (0.128, 0.238), (0.092, 0.105), (0.045, 0.05), (-0.045, 0.05), (-0.092, 0.105)], 0.05, A2, helm, (0, -0.152, 0), (-3, 0, 0), inset=0.02, detail=False)
-plate('Brow', [(-0.158, 0.39), (0.0, 0.352), (0.158, 0.39), (0.152, 0.322), (0.0, 0.29), (-0.152, 0.322)], 0.06, A, helm, (0, -0.178, 0.0), (-9, 0, 0), inset=0.016, round=0.012, detail=False)
-plate('Nose', [(-0.016, 0.3), (0.016, 0.3), (0.028, 0.205), (0.0, 0.19), (-0.028, 0.205)], 0.034, A2, helm, (0, -0.198, 0), (-5, 0, 0), inset=0.012, round=0.008, detail=False)
-MOUTH = os.environ.get('MOUTH', 'A')  # which mouth design to build
-if MOUTH == 'A':
-    # jaw: a centre keel with two layered plates each side and vent slots, instead of a mouth
-    plate('Jaw keel', [(-0.026, 0.192), (0.026, 0.192), (0.04, 0.1), (0.0, 0.03), (-0.04, 0.1)], 0.056, A, helm, (0, -0.196, 0), (3, 0, 0), inset=0.014, round=0.008, detail=False)
-    box('Keel light', (0.008, 0.012, 0.075), G, helm, (0, -0.256, 0.128), (3, 0, 0), bevel=0)
-    for s in (1, -1):
-        plate('Jaw plate', mx([(0.03, 0.19), (0.092, 0.178), (0.086, 0.112), (0.046, 0.066)], s), 0.04, A2, helm, (0, -0.194, 0), (2, s * 16, 0), inset=0.012, round=0.008, detail=False)
-        plate('Jaw strake', mx([(0.05, 0.1), (0.1, 0.125), (0.094, 0.085), (0.058, 0.05)], s), 0.03, A, helm, (0, -0.19, 0), (6, s * 24, 0), inset=0.008, round=0.006, detail=False)
-        for k in range(3):
-            box('Jaw vent', (0.034, 0.012, 0.007), F, helm, (s * 0.058, -0.2385 + 0.0, 0.166 - k * 0.019), (2, s * 16, s * -8), bevel=0)
-elif MOUTH == 'B':
-    # battle mask: one smooth plate with a bronze centre ridge and two lit slits each side
-    plate('Battle mask', [(-0.092, 0.2), (0.092, 0.2), (0.086, 0.11), (0.04, 0.04), (-0.04, 0.04), (-0.086, 0.11)], 0.052, A, helm, (0, -0.196, 0), (3, 0, 0), inset=0.02, round=0.012, detail=False)
-    plate('Mask ridge', [(-0.009, 0.2), (0.009, 0.2), (0.015, 0.05), (-0.015, 0.05)], 0.064, T, helm, (0, -0.196, 0), (3, 0, 0), inset=0.008, round=0.004, detail=False)
-    for s in (1, -1):
-        for k in range(2):
-            box('Mask light', (0.04, 0.012, 0.007), G, helm, (s * 0.05, -0.2475, 0.15 - k * 0.028), (3, 0, s * -18), bevel=0)
-elif MOUTH == 'C':
-    # grille: four louvre bars that narrow toward the chin, with a strut each side
-    for k in range(4):
-        w, z = 0.088 - k * 0.015, 0.178 - k * 0.036
-        plate('Grille bar %d' % (k + 1), [(-w, z + 0.013), (w, z + 0.013), (w - 0.01, z - 0.013), (-w + 0.01, z - 0.013)], 0.05 - k * 0.004, A2 if k % 2 else A, helm, (0, -0.194, 0), (10, 0, 0), inset=0.008, round=0.005, detail=False)
-    box('Grille glow', (0.11, 0.01, 0.12), G, helm, (0, -0.2, 0.125), bevel=0)
-    for s in (1, -1):
-        plate('Grille strut', mx([(0.088, 0.2), (0.108, 0.195), (0.07, 0.04), (0.05, 0.05)], s), 0.05, A, helm, (0, -0.194, 0), (3, s * 10, 0), inset=0.008, round=0.005, detail=False)
-else:
-    # mandibles: two jaw halves that meet over a lit seam, ending in a pointed chin
-    box('Jaw seam light', (0.012, 0.012, 0.14), G, helm, (0, -0.226, 0.125), (3, 0, 0), bevel=0)
-    for s in (1, -1):
-        plate('Mandible', mx([(0.008, 0.195), (0.092, 0.182), (0.084, 0.105), (0.03, 0.035), (0.008, 0.06)], s), 0.054, A, helm, (0, -0.194, 0), (3, s * 13, 0), inset=0.016, round=0.01, detail=False)
-        plate('Mandible plate', mx([(0.03, 0.17), (0.075, 0.162), (0.068, 0.115), (0.034, 0.09)], s), 0.012, A2, helm, (0, -0.25, 0), (3, s * 13, 0), inset=0.005, round=0.005, detail=False)
+# ---- face -------------------------------------------------------------------------------
+# One design, followed through: a knight's face of small layered plates that wrap around the
+# head. Round lens eyes sit deep under a heavy two-layer brow, cheekbone plates step back to
+# the jaw hinge, and the mouth is a closed, stern line between two lip plates over a split chin.
+FACE_R = 0.165  # the face wraps a cylinder of this radius
+
+
+def fplate(name, pts, depth, mat, y, tilt=-3, **kw):
+    kw.setdefault('detail', False)
+    kw.setdefault('round', 0.006)
+    ob = plate(name, pts, depth, mat, helm, (0, y, 0), (0, 0, 0), **kw)
+    for v in ob.data.vertices:
+        v.co.y += FACE_R - math.sqrt(max(FACE_R * FACE_R - v.co.x * v.co.x, 0.0006))
+    ob.rotation_euler.x = R(tilt)
+    return ob
+
+
+def wrap(x):  # how far back the face surface sits at this x
+    return FACE_R - math.sqrt(max(FACE_R * FACE_R - x * x, 0.0006))
+
+
+fplate('Face core', [(-0.132, 0.345), (0.132, 0.345), (0.132, 0.2), (0.092, 0.09), (0.04, 0.038), (-0.04, 0.038), (-0.092, 0.09), (-0.132, 0.2)], 0.03, F, -0.148, inset=0.008)
+fplate('Forehead plate', [(-0.03, 0.352), (0.03, 0.352), (0.022, 0.302), (0.0, 0.286), (-0.022, 0.302)], 0.056, A2, -0.186, inset=0.012)
+fplate('Nose bridge', [(-0.013, 0.294), (0.013, 0.294), (0.021, 0.216), (0.012, 0.198), (-0.012, 0.198), (-0.021, 0.216)], 0.058, A2, -0.19, inset=0.012)
 for s in (1, -1):
-    plate('Eye socket', mx([(0.0, 0.33), (0.15, 0.34), (0.15, 0.225), (0.0, 0.225)], s), 0.014, VIS, helm, (0, -0.166, 0), (-3, 0, 0), bevel=0.003, round=0.006, detail=False)
-    plate('Eye light', mx([(0.036, 0.266), (0.112, 0.3), (0.12, 0.268), (0.042, 0.244)], s), 0.008, G, helm, (0, -0.179, 0), (-3, 0, 0), bevel=0, round=0.004, detail=False)
-    plate('Eye rim', mx([(0.028, 0.24), (0.128, 0.262), (0.132, 0.232), (0.034, 0.212)], s), 0.024, A, helm, (0, -0.19, 0), (-3, 0, 0), inset=0.008, round=0.006, detail=False)
-    plate('Temple plate', mx([(0.118, 0.34), (0.15, 0.345), (0.152, 0.235), (0.126, 0.24)], s), 0.03, A, helm, (0, -0.178, 0), (-3, 0, 0), inset=0.008, round=0.006, detail=False)
+    fplate('Brow ridge', mx([(0.012, 0.302), (0.036, 0.336), (0.132, 0.346), (0.138, 0.314), (0.062, 0.296), (0.02, 0.284)], s), 0.064, A, -0.186, tilt=-8, inset=0.014)
+    fplate('Brow crest', mx([(0.04, 0.352), (0.132, 0.362), (0.152, 0.402), (0.052, 0.378)], s), 0.044, A2, -0.182, tilt=-10, inset=0.01)
+    # the lids close the round lens down to a narrow, level stare
+    fplate('Eyelid', mx([(0.026, 0.292), (0.114, 0.304), (0.116, 0.281), (0.03, 0.2685)], s), 0.04, A, -0.184, inset=0.008)
+    fplate('Eye rim', mx([(0.03, 0.247), (0.116, 0.255), (0.12, 0.228), (0.034, 0.218)], s), 0.038, A2, -0.18, inset=0.008)
+    fplate('Upper lip', mx([(0.002, 0.192), (0.03, 0.196), (0.064, 0.176), (0.06, 0.15), (0.002, 0.157)], s), 0.048, A2, -0.19, tilt=2, inset=0.012)
+    fplate('Lower lip', mx([(0.002, 0.152), (0.05, 0.145), (0.04, 0.12), (0.002, 0.117)], s), 0.042, A, -0.188, tilt=5, inset=0.01)
+    fplate('Nose guard', mx([(0.02, 0.252), (0.036, 0.236), (0.04, 0.204), (0.024, 0.2)], s), 0.04, A, -0.19, inset=0.008)
+    fplate('Cheek plate 1', mx([(0.044, 0.214), (0.12, 0.226), (0.126, 0.19), (0.052, 0.178)], s), 0.042, A2, -0.178, inset=0.01)
+    fplate('Cheek plate 2', mx([(0.064, 0.176), (0.128, 0.188), (0.12, 0.146), (0.074, 0.132)], s), 0.038, A, -0.176, inset=0.01)
+    fplate('Cheek plate 3', mx([(0.076, 0.13), (0.119, 0.142), (0.102, 0.096), (0.072, 0.082)], s), 0.034, A2, -0.174, inset=0.008)
+    fplate('Chin half', mx([(0.004, 0.112), (0.046, 0.112), (0.052, 0.076), (0.03, 0.044), (0.004, 0.04)], s), 0.052, A, -0.186, tilt=5, inset=0.012)
+    fplate('Jaw line', mx([(0.05, 0.11), (0.072, 0.126), (0.1, 0.092), (0.062, 0.05), (0.036, 0.042)], s), 0.032, A2, -0.172, tilt=4, inset=0.008)
+    # the eye: a lit lens in a dark housing with a bronze bezel
+    ex, ez = s * 0.068, 0.262
+    ey = -0.17 + wrap(ex)
+    cyl('Eye housing', 0.034, 0.03, F, helm, (ex, ey, ez), 'y', seg=28, bevel=0.004)
+    torus('Eye bezel', 0.027, 0.0055, T, helm, (ex, ey - 0.016, ez), 'y', seg=28, tseg=8)
+    sphere('Eye light', 0.021, G, helm, (ex, ey - 0.004, ez))
     plate('Skull plate', mx([(-0.11, 0.41), (0.1, 0.47), (0.2, 0.37), (0.17, 0.2), (-0.07, 0.21)], s), 0.022, A2, helm, (s * 0.158, 0.03, 0.0), (0, 0, s * 90), inset=0.008, round=0.02)
-    plate('Cheek', mx([(0.045, 0.222), (0.128, 0.238), (0.1, 0.118), (0.062, 0.096)], s), 0.028, A, helm, (0, -0.196, 0), (-2, s * 10, 0), inset=0.01, round=0.01, detail=False)
     # crown: three blades rising from the brow, the outer two swept outward
     plate('Crown blade', mx([(0.04, 0.385), (0.1, 0.4), (0.19, 0.56), (0.085, 0.455)], s), 0.03, T, helm, (0, -0.2, 0.0), (-7, 0, 0), inset=0.008, round=0.006, detail=False)
     # temple fins: three stacked blades swept back like his wings
