@@ -297,7 +297,7 @@ export class Stage {
 
     // Studio graphics: thin rings and tick marks turning slowly behind the robot.
     const halo = new THREE.Group();
-    const lineMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(this.theme.grid), transparent: true, opacity: 0.16, depthWrite: false, fog: false, side: THREE.DoubleSide });
+    const lineMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(this.theme.grid), transparent: true, opacity: 0.08, depthWrite: false, fog: false, side: THREE.DoubleSide });
     this.haloRings = [];
     for (const [r, w, arc] of [[3.1, 0.012, 6.283], [3.9, 0.03, 1.9], [4.6, 0.01, 6.283], [5.6, 0.05, 0.9], [6.4, 0.008, 6.283]]) {
       const g = new THREE.Group();
@@ -381,8 +381,11 @@ export class Stage {
       this.camera.position.add(d);
       this.key.position.copy(c.target).add(this.keyOffset);
       this.key.target.position.copy(c.target);
-      this.pad.position.x = damp(this.pad.position.x, focus.x, 3, dt);
-      this.pad.position.z = damp(this.pad.position.z, focus.z, 3, dt);
+      if (!this.padHold) {
+        // the floor ring walks with him, but stays put while he flies so the ground can pass under
+        this.pad.position.x = damp(this.pad.position.x, focus.x, 3, dt);
+        this.pad.position.z = damp(this.pad.position.z, focus.z, 3, dt);
+      }
       this.dust.position.set(c.target.x, 0, c.target.z);
       this.sky.position.copy(this.camera.position);
     }

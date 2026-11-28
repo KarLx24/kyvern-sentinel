@@ -11,11 +11,23 @@ import { Hud } from './framework/hud.js';
 import { loadPartModels } from './framework/partmodels.js';
 import { buildSentinel, SECTIONS } from './sentinel/model.js';
 import { loadBlenderSentinel, buildFromBlender, blenderForms } from './sentinel/blender.js';
-import { ROLES, LINES, FORMS, STATES, CHAPTERS, CARDS } from './sentinel/config.js';
+import { buildEffects } from './sentinel/effects.js';
+import { ROLES, LINES, FORMS, STATES, STATE_ALIAS, CHAPTERS, SPEC } from './sentinel/config.js';
 
 const query = new URLSearchParams(location.search);
 const pick = (key, table, fallback) => (table[query.get(key)] ? query.get(key) : fallback);
-const SPEEDS = [1, 0.5, 0.25, 2];
+const SPEEDS = [0.25, 0.5, 1, 2];
+const METERS = [
+  { id: 'core', label: 'Reactor output', unit: 'MW', wave: true },
+  { id: 'temp', label: 'Core temperature', unit: 'K' },
+  { id: 'servo', label: 'Servo load', unit: '%', bars: true },
+  { id: 'hyd', label: 'Hydraulic pressure', unit: 'bar' },
+  { id: 'thrust', label: 'Thrust', unit: 'kN' },
+  { id: 'span', label: 'Wing span', unit: 'm' },
+  { id: 'alt', label: 'Altitude', unit: 'm' },
+  { id: 'speed', label: 'Airspeed', unit: 'km/h' },
+  { id: 'cell', label: 'Reserve cell', unit: '%' },
+];
 
 const canvas = document.getElementById('gl');
 const stage = new Stage(canvas, { theme: { backdrop: new URLSearchParams(location.search).get('scene') === 'city' ? 'city' : 'studio' } });
@@ -30,6 +42,7 @@ const forms = new Forms(rig, gltf ? blenderForms(FORMS) : FORMS, pick('form', FO
 const walker = new Walker(rig, forms);
 const behaviour = new Behaviour(forms);
 stage.scene.add(rig.root);
+const effects = buildEffects({ rig, stage, paint, forms, behaviour });
 
 const chapters = CHAPTERS.map((c) => {
   const s = SECTIONS.find((x) => x.id === c.section);
@@ -37,15 +50,16 @@ const chapters = CHAPTERS.map((c) => {
 });
 
 const app = {
-  state: pick('state', STATES, 'idle'),
+  state: pick('state', STATES, STATE_ALIAS[query.get('state')] || 'guard'),
   speed: 1,
   section: 'overview', // what the left list shows as open
   openPart: null,
   teardownLevel: 0,
-  caption: '',
+  caption: null,
   wings: query.get('wings') !== 'folded',
 };
 let wingVel = 0; // how fast the wings are moving, so they ease in and out and can turn round mid-way
+let homing = false; // true while he flies himself back to the pad
 let wing = 0; // 0 folded away, 1 spread. Starts folded so he opens them as the page loads.
 
 // ---- HUD -------------------------------------------------------------------------------
@@ -56,15 +70,15 @@ const hud = new Hud(
     code: 'SENTINEL · SN-01',
     banner: 'S E N T I N E L · S N - 0 1',
     credit: 'Kyvern Sentinel SN-01 · design and direction by Karl Salvador · built with Claude · <a href="./portrait/">portrait render</a>',
-    chapters,
     sections: SECTIONS,
     forms: FORMS,
     lines: LINES,
     states: STATES,
-    cards: CARDS,
+    spec: SPEC,
+    meters: METERS,
+    speeds: SPEEDS,
   },
   {
-    chapter: (id) => tour.play(id),
     tourAll: () => (tour.active ? tour.stop() : tour.playAll()),
     section: (id) => api.open(id === app.section && id !== 'teardown' ? 'overview' : id),
     form: (id) => api.setForm(id),
@@ -72,10 +86,11 @@ const hud = new Hud(
     state: (id) => api.setState(id),
     wings: (open) => api.setWings(open),
     zoom: (d) => hud.setZoom(stage.setZoom(stage.zoom * (d > 0 ? 1.15 : 1 / 1.15))),
-    speed: () => {
-      app.speed = SPEEDS[(SPEEDS.indexOf(app.speed) + 1) % SPEEDS.length];
-      hud.setSpeed(app.speed);
+    speed: (s) => {
+      app.speed = s;
+      hud.setSpeed(s);
     },
+    home: () => stage.home(),
     pad: (axis, v) => (walker.pad[axis] = v),
   },
 );
@@ -105,13 +120,17 @@ const api = {
       rig.closeAll();
       setOpen('overview', null);
       behaviour.surge = 1;
+      if (id !== 'vehicle') homing = true; // fly back to the pad and land
+      // the starship is best seen from above and behind; every other form from the front
+      if (id !== 'vehicle') stage.view(Math.atan2(stage.homeDir.x, stage.homeDir.z), Math.asin(stage.homeDir.y));
     }
-    hud.setForm(id, FORMS[id].caption);
+    hud.setForm(id);
   },
   setLine(id) {
     if (paint.set(id)) hud.setLine(id, paint.line().roles.glow);
   },
   setState(id) {
+    id = STATE_ALIAS[id] || id;
     if (!STATES[id]) return;
     app.state = id;
     hud.setState(id);
@@ -206,16 +225,16 @@ const tour = new Tour(chapters, {
     else openThing('overview');
     if (ch.form) api.setForm(ch.form);
     if (ch.surge) behaviour.surge = 1;
-    app.caption = `${ch.label}`;
+    app.caption = [`Tour · ${ch.label}`, ''];
   },
   line(ch, i) {
-    app.caption = `${ch.label} · ${ch.lines[i]}`;
+    app.caption = [`Tour · ${ch.label}`, ch.lines[i]];
   },
   end(ch, more) {
     hud.setChapter(null);
     stage.spin = 0;
     if (ch.form) api.setForm('sentinel');
-    app.caption = '';
+    app.caption = null;
     if (!more) {
       openThing('overview');
       stage.home();
@@ -225,6 +244,7 @@ const tour = new Tour(chapters, {
 });
 walker.onStart = () => {
   tour.stop();
+  homing = false;
   if (rig.isOpen()) openThing('overview');
 };
 
@@ -295,33 +315,58 @@ function anchor(key, objects, out) {
 }
 const tmp2 = new THREE.Vector3();
 const tmp3 = new THREE.Vector3();
-function labels() {
+// Labels keep their side and glide to their slot, so they never jump or swap while parts move.
+const slots = new Map(); // label key -> { dir, ly }
+let labelClock = 0;
+function labels(dt) {
   const out = [];
-  const push = (text, v, sub, alpha) => {
+  const push = (key, text, v, sub, alpha) => {
     stage.project(v, scr);
-    if (scr.visible && alpha > 0.05) out.push({ text, ax: scr.x, ay: scr.y, sub, alpha });
+    if (scr.visible && alpha > 0.05) out.push({ key, text, ax: scr.x, ay: scr.y, sub, alpha });
   };
   for (const p of rig.parts.values()) {
-    if (p.sub > 0.05) {
-      for (const s of p.subs) push(s.name, anchor(s, [s.object], tmp), true, Math.min(1, p.sub * 1.4));
-    } else if (p.sep > 0.25 && p.sepTarget > 0) push(p.label, anchor(p, p.subs.map((s) => s.object), tmp), false, Math.min(1, (p.sep - 0.25) * 2));
+    // the pieces of a part are only named when that one part is open, never in a full teardown
+    if (p === app.openPart && p.sub > 0.05) {
+      for (const s of p.subs) push(`${p.id}/${s.name}`, s.name, anchor(s, [s.object], tmp), true, Math.min(1, p.sub * 1.4));
+    } else if (p.sep > 0.25 && p.sepTarget > 0 && !(app.openPart && p.subTarget > 0)) push(p.id, p.label, anchor(p, p.subs.map((s) => s.object), tmp), false, Math.min(1, (p.sep - 0.25) * 2));
   }
+  labelClock++;
   if (out.length) {
-    // names go out to the side their part is on, then spread down so they do not collide
+    const W = window.innerWidth;
+    const H = window.innerHeight;
+    const wide = W > 900;
     const mid = out.reduce((s, it) => s + it.ax, 0) / out.length;
-    const reach = out.length > 8 ? 64 : 48;
+    for (const it of out) {
+      let slot = slots.get(it.key);
+      if (!slot || slot.seen < labelClock - 1) slots.set(it.key, (slot = { dir: it.ax < mid ? -1 : 1, ly: null }));
+      slot.seen = labelClock;
+      it.slot = slot;
+      it.dir = slot.dir;
+    }
+    const top = wide ? 150 : 90;
+    const bottom = H - (parseFloat(getComputedStyle(hud.root).getPropertyValue('--dock-h')) || 60) - 70;
     for (const dir of [-1, 1]) {
-      const side = out.filter((it) => (it.ax >= mid ? 1 : -1) === dir).sort((a, b) => a.ay - b.ay);
+      const side = out.filter((it) => it.dir === dir).sort((a, b) => a.ay - b.ay);
+      if (!side.length) continue;
+      // one straight column of names per side, just outside the outermost part on that side
+      const edge = dir < 0 ? Math.min(...side.map((it) => it.ax)) : Math.max(...side.map((it) => it.ax));
+      const col = Math.max(wide ? 330 : 96, Math.min(W - (wide ? 330 : 96), edge + dir * 56));
+      const gap = Math.min(22, Math.max(15, (bottom - top) / side.length));
       let last = -Infinity;
       for (const it of side) {
-        it.dir = dir;
-        it.lx = it.ax + dir * reach;
-        it.ly = Math.max(it.ay, last + 21);
-        last = it.ly;
+        it.ty = Math.max(it.ay, last + gap);
+        last = it.ty;
       }
-      // if the stack ran long, slide it back up so it stays centred on its parts
-      const over = side.reduce((s, it) => s + (it.ly - it.ay), 0) / (side.length || 1);
-      for (const it of side) it.ly -= over / 2;
+      const over = side.reduce((s, it) => s + (it.ty - it.ay), 0) / side.length;
+      const shift = Math.min(0, bottom - (last - over / 2)) - over / 2;
+      const lift = Math.max(0, top - (side[0].ty + shift));
+      for (const it of side) {
+        const want = it.ty + shift + lift;
+        it.slot.ly = it.slot.ly == null ? want : it.slot.ly + (want - it.slot.ly) * (1 - Math.exp(-10 * dt));
+        it.slot.lx = it.slot.lx == null ? col : it.slot.lx + (col - it.slot.lx) * (1 - Math.exp(-10 * dt));
+        it.ly = it.slot.ly;
+        it.lx = it.slot.lx;
+      }
     }
   }
   hud.drawLabels(out);
@@ -331,26 +376,36 @@ function labels() {
 let battery = 87;
 let load = [0.2, 0.2, 0.2, 0.2, 0.2, 0.2];
 let cardClock = 0;
+let heat = 0.3;
 function telemetry(dt) {
   cardClock += dt;
   battery = Math.max(5, battery - dt * (0.004 + forms.params.thrust * 0.01 + walker.gait * 0.01));
   if (cardClock < 0.12) return;
   cardClock = 0;
-  const busy = Math.min(1, walker.gait * 0.7 + (forms.busy ? 0.8 : 0) + forms.params.thrust * 0.08 + (rig.isOpen() ? 0.25 : 0));
+  const busy = Math.min(1, walker.gait * 0.7 + (forms.busy ? 0.8 : 0) + forms.params.thrust * 0.08 + (rig.isOpen() ? 0.25 : 0) + behaviour.cur.beat * 0.5 + behaviour.cur.flare * 0.2 + Math.abs(wingVel) * 0.8);
   load = load.map((v, i) => v + (0.12 + busy * (0.55 + 0.4 * Math.sin(performance.now() / 300 + i * 1.7)) - v) * 0.35);
-  const core = Math.min(1.2, behaviour.core * 0.62);
-  const span = (forms.params.fanTop - forms.params.fanBottom) * wing;
-  hud.setCards([
-    { value: Math.round(core * 100), unit: '%', level: Math.min(1, core * 0.8) },
-    { value: Math.round(span), unit: '°', level: span / 110 },
-    { value: Math.round(busy * 100), unit: '%', bars: load },
-    { value: Math.round(battery), unit: '%', level: battery / 100 },
-  ]);
+  const core = Math.min(2.4, behaviour.core) / 2.4;
+  heat += (core - heat) * 0.04; // the core takes a while to heat up and cool down
+  const thrust = Math.max(0, paint.mats.thrust.emissiveIntensity - 0.2) / 6;
+  const spanDeg = Math.max(0, wingNow.top - wingNow.bottom) * wing;
+  const speed = Math.abs(walker.speed) * (forms.height > 0.5 ? 172 : 3.6);
+  hud.setMeters({
+    core: { value: (core * 4.2 * 1.6).toFixed(1), level: core },
+    temp: { value: Math.round(1900 + heat * 2600), level: heat, hot: heat > 0.72 },
+    servo: { value: Math.round(busy * 100), bars: load },
+    hyd: { value: Math.round(182 + busy * 46 + Math.sin(performance.now() / 900) * 3), level: 0.55 + busy * 0.4 },
+    thrust: { value: Math.round(Math.min(1, thrust) * 76), level: thrust },
+    span: { value: (1.3 + 6.1 * Math.min(1, spanDeg / 86) * wing).toFixed(1), level: (spanDeg / 110) * wing },
+    alt: { value: (forms.height * 34 + rig.lift).toFixed(1), level: forms.height / 2.5 },
+    speed: { value: Math.round(speed), level: speed / 900 },
+    cell: { value: Math.round(battery), level: battery / 100 },
+  });
 }
 
 // ---- frame -----------------------------------------------------------------------------
 const clock = new THREE.Clock();
 const focus = new THREE.Vector3();
+const wingNow = { top: 0, bottom: 0 };
 const glowBase = { glow: ROLES.glow.glow, core: ROLES.core.glow };
 let time = 0;
 const manual = query.get('manual') === '1'; // frames are advanced by sentinel.step(), for captures
@@ -362,22 +417,44 @@ function tick(real) {
   const dt = real * app.speed;
   time += dt;
   const flying = forms.height > 0.5;
+  const st = STATES[app.state];
 
+  // Starship form flies a patrol circuit on its own; leaving it, he flies back to the pad and lands
+  const cruise = forms.current === 'vehicle' && forms.params.fly > 0.85 ? 1 : 0;
+  walker.auto.fwd = cruise * 0.8;
+  walker.auto.turn = cruise * 0.42;
+  if (homing && !cruise) {
+    const k = 1 - Math.exp(-1.6 * dt);
+    rig.root.position.x -= rig.root.position.x * k;
+    rig.root.position.z -= rig.root.position.z * k;
+    const turns = Math.round(walker.heading / (Math.PI * 2)) * Math.PI * 2;
+    walker.heading += (turns - walker.heading) * k;
+    if (Math.hypot(rig.root.position.x, rig.root.position.z) < 0.01 && Math.abs(turns - walker.heading) < 0.01 && !forms.busy) homing = false;
+  }
+  // chase view while he cruises: behind and above, so the ground and air rush past him
+  if (cruise && !stage.dragging && !walker.steering) stage.goal = { az: walker.heading + Math.PI - 0.62, el: 0.36 };
+  stage.padHold = flying;
   walker.update(dt, flying);
-  behaviour.update(dt, STATES[app.state], flying ? 0.3 : 1);
+  behaviour.update(dt, st, flying ? 0.3 : 1);
   forms.update(dt);
   rig.update(dt);
 
   // the model's own moving pieces
   const p = forms.params;
-  // wings: flight always needs them out; otherwise they follow the Wings switch
-  const wingGoal = app.wings || forms.current === 'flight' ? 1 : 0;
-  const wingMax = wingGoal ? 0.46 : 0.52; // top speed, in spreads per second
-  const wingWant = Math.max(-wingMax, Math.min(wingMax, (wingGoal - wing) * 3.2));
-  wingVel += (wingWant - wingVel) * (1 - Math.exp(-5 * dt));
+  // wings: the starship always needs them out; otherwise they follow the Wings switch and the state
+  const wingGoal = forms.current === 'vehicle' || (app.wings && st.wings !== false) ? 1 : 0;
+  // a critically damped spring: no top-speed clamp and no snap, so the fold starts and lands softly
+  const wingRate = 2.6;
+  const wingAcc = wingRate * wingRate * (wingGoal - wing) - 2 * wingRate * wingVel;
+  wingVel += wingAcc * dt;
   wing = Math.max(0, Math.min(1, wing + wingVel * dt));
-  if (Math.abs(wingGoal - wing) < 0.0015 && Math.abs(wingVel) < 0.01) { wing = wingGoal; wingVel = 0; }
-  model.wings(wing, p.fanTop, p.fanBottom, time * 2.2 * p.wingBeat, forms);
+  // states add to the fan: combat flares it wider, overdrive beats it
+  const calmW = flying ? 0 : 1;
+  const beat = Math.sin(time * 4.6) * behaviour.cur.beat * calmW;
+  wingNow.top = p.fanTop + (behaviour.cur.flare * 16 + beat * 10) * calmW;
+  wingNow.bottom = p.fanBottom + (behaviour.cur.flare * -6 + beat * 16) * calmW;
+  model.wings(wing, wingNow.top, wingNow.bottom, time * 2.2 * p.wingBeat, forms);
+  if (behaviour.cur.beat > 0.02) for (const side of ['l', 'r']) forms.nudge(`wingdrive_${side}`, 0, beat * 0.1, beat * 0.2 * wing);
   model.orbit.forEach((r, i) => {
     r.rotation.x += dt * (0.9 + i * 0.5) * behaviour.spin;
     r.rotation.y += dt * (0.6 - i * 0.35) * behaviour.spin;
@@ -385,34 +462,39 @@ function tick(real) {
   model.reactor.scale.setScalar(1 + 0.06 * Math.sin(time * 3) + behaviour.surge * 0.25);
   paint.mats.core.emissiveIntensity = glowBase.core * behaviour.core;
   paint.mats.glow.emissiveIntensity = glowBase.glow * behaviour.seam;
-  paint.mats.thrust.emissiveIntensity = p.thrust * (0.85 + 0.15 * Math.sin(time * 31)) + Math.abs(walker.fwd) * (flying ? 3 : 0);
+  paint.mats.thrust.emissiveIntensity = p.thrust * (0.85 + 0.15 * Math.sin(time * 31)) + Math.abs(walker.fwd) * (flying ? 3 : 0) + behaviour.cur.beat * 1.2;
+  effects.update(dt, time);
 
   const hover = flying ? Math.sin(time * 1.6) * 0.06 : 0;
-  rig.tilt.position.y = (model.hip || 1.98) + forms.height + rig.lift + (walker.bob || 0) + hover;
+  rig.tilt.position.y = (model.hip || 1.98) + forms.height + rig.lift + (walker.bob || 0) + hover - behaviour.cur.drop * calmW + behaviour.cur.beat * calmW * (0.1 + 0.05 * Math.sin(time * 4.6 + 1.2));
   focus.set(rig.root.position.x, 1.95 + forms.height * 0.85 + rig.lift * 0.7, rig.root.position.z);
   model.reactor.getWorldPosition(corePos);
   coreLight.position.copy(corePos).addScaledVector(tmp.set(0, 0, 1).applyQuaternion(rig.root.quaternion), 0.45);
   coreLight.color.copy(paint.mats.core.emissive);
   coreLight.intensity = 1.6 * behaviour.core;
+  paint.shared.uGrid.value = p.grid;
+  stage.bloom.strength = 0.16 + 0.3 * p.grid;
   paint.update(real, corePos);
   // a full teardown is taller and wider than the robot, so the camera gives it room.
   // Opening a single part or section never moves the camera.
   stage.reach = 1 + 0.55 * Math.min(1, rig.lift / 1.1) * (app.section === 'teardown' ? 1 : 0);
   stage.update(real, focus);
 
-  // words under the robot
+  // the line under the data plate
   let caption = app.caption;
   if (!caption) {
-    if (forms.busy) caption = `${FORMS[forms.from].label} form · changing to ${FORMS[forms.current].label}`;
-    else if (app.openPart) caption = `${app.openPart.label} · ${app.openPart.subs.length} pieces`;
-    else if (app.section === 'teardown') caption = app.teardownLevel > 1 ? 'Teardown · every piece' : `Teardown · ${rig.parts.size} parts`;
-    else if (app.section !== 'overview') caption = `${rig.sections.get(app.section).label} · ${rig.sections.get(app.section).parts.length} parts`;
-    else if (wing > 0.02 && wing < 0.98) caption = wingGoal ? 'Wings · spreading' : 'Wings · folding away';
-    else if (walker.moving) caption = flying ? 'Flight form · under control' : 'Walking · under control';
-    else caption = `${FORMS[forms.current].label} form · ${STATES[app.state].label.toLowerCase()}`;
+    const sec = rig.sections.get(app.section);
+    if (forms.busy) caption = ['Transforming', `${FORMS[forms.from].label} to ${FORMS[forms.current].label}`];
+    else if (app.openPart) caption = [app.openPart.label, `${app.openPart.note} ${app.openPart.subs.length} pieces.`];
+    else if (app.section === 'teardown') caption = ['Teardown', app.teardownLevel > 1 ? 'Every piece of every part spread out' : `All ${rig.parts.size} parts apart, each split at its joint`];
+    else if (sec) caption = [sec.label, `${sec.lines.join(' · ')} · ${sec.parts.length} parts`];
+    else if (Math.abs(wingVel) > 0.03) caption = ['Wings', wingGoal ? 'Arm swinging up, blades fanning out' : 'Blades stacking, arm stowing behind his back'];
+    else if (walker.steering) caption = [flying ? 'Flying' : 'Walking', 'Under your control'];
+    else if (homing && flying) caption = ['Returning', 'Flying back to the pad'];
+    else caption = [`${FORMS[forms.current].label} form`, flying ? FORMS[forms.current].caption : `${FORMS[forms.current].caption} · ${st.label}: ${st.note.toLowerCase()}`];
   }
-  hud.setCaption(caption);
-  labels();
+  hud.setCaption(caption[0], caption[1]);
+  labels(real);
   if (hovered && !walker.moving) hud.setHover(app.openPart === hovered.hit.part ? hovered.hit.sub.name : hovered.hit.part.label, hovered.x, hovered.y);
   else hud.setHover(null);
   telemetry(real);
@@ -420,7 +502,9 @@ function tick(real) {
   stage.render(real);
 }
 
-hud.setForm(forms.current, FORMS[forms.current].caption);
+hud.setForm(forms.current);
+hud.setSpeed(app.speed);
+hud.setParts(rig.parts.size, [...rig.parts.values()].reduce((n, q) => n + q.subs.length, 0));
 hud.setLine(paint.current, paint.line().roles.glow);
 hud.setState(app.state);
 hud.setWings(app.wings);

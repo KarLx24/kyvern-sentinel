@@ -19,13 +19,16 @@ export class Paint {
       uSwDir: { value: new THREE.Vector3(0.3, 1, 0.25).normalize() },
       uSwEdge: { value: new THREE.Color('#ffffff') },
       uTime: { value: 0 },
+      uGrid: { value: 0 }, // 0..1 the light-line look: armour goes dark, edges and contour lines light up
     };
     this.t = 1;
     this.spread = 0; // 0..1 while the colour is travelling
     const line = lines.find((l) => l.id === first);
     for (const [role, base] of Object.entries(roles)) {
       const c = line.roles[role] || base.color || '#888888';
-      const mat = new THREE.MeshStandardMaterial({
+      // armour is lacquered like car paint: a clear coat over the colour gives the long smooth highlights
+      const mat = new (base.coat ? THREE.MeshPhysicalMaterial : THREE.MeshStandardMaterial)({
+        ...(base.coat ? { clearcoat: base.coat, clearcoatRoughness: base.coatRough ?? 0.14 } : {}),
         color: base.glow ? '#000000' : c,
         emissive: base.glow ? c : '#000000',
         emissiveIntensity: base.glow || 1,
@@ -41,6 +44,9 @@ export class Paint {
       this.patch(mat);
       this.mats[role] = mat;
     }
+    // the light lines take the colour of the glow role, old and new, so they follow a colour sweep
+    this.shared.uGlowA = { value: this.mats.glow.emissive };
+    this.shared.uGlowB = { value: this.mats.glow.userData.to.uToEmissive.value };
   }
 
   patch(mat) {
@@ -59,6 +65,7 @@ export class Paint {
           varying vec3 vSwp;
           uniform float uSweep; uniform float uSwOn; uniform vec3 uSwOrigin; uniform vec3 uSwDir; uniform vec3 uSwEdge;
           uniform vec3 uToColor; uniform vec3 uToEmissive; uniform float uTime;
+          uniform float uGrid; uniform vec3 uGlowA; uniform vec3 uGlowB; float gridGlow = 0.0;
           // Worn metal: grime, fine scratches and bare edges, drawn from where each point sat
           // in the rest pose (aRest) so the marks stay put when he moves.
           varying vec3 vRest;
@@ -77,6 +84,15 @@ export class Paint {
           float swS = length(vSwp - uSwOrigin);
           float swK = 1.0 - smoothstep(uSweep - 0.03, uSweep + 0.03, swS);
           diffuseColor.rgb = mix(diffuseColor.rgb, uToColor, swK);
+          #if ${mat.userData.glow ? 0 : 1}
+            if (uGrid > 0.001) {
+              float gEdge = smoothstep(0.1, 0.55, length(fwidth(normalize(vNormal))) * 2.4);
+              vec3 gp = abs(fract(vRest * vec3(2.5, 2.5, 3.5)) - 0.5);
+              float gLine = smoothstep(0.482, 0.496, max(gp.x, gp.z));
+              gridGlow = clamp(gEdge + gLine * 0.85, 0.0, 1.0) * uGrid;
+              diffuseColor.rgb *= mix(1.0, 0.07, uGrid);
+            }
+          #endif
           #if ${wear > 0 ? 1 : 0}
             wGrime = wFbm(vRest * 7.0);
             float wScr = smoothstep(0.7, 0.95, wNoise(vec3(vRest.x * 70.0 + vRest.y * 22.0, vRest.y * 5.0, vRest.z * 70.0)))
@@ -99,6 +115,7 @@ export class Paint {
           totalEmissiveRadiance = mix(totalEmissiveRadiance, uToEmissive * ${mat.emissiveIntensity.toFixed(2)}, swK);
           // lights breathe: a soft pulse travels out from the core along every lit line
           totalEmissiveRadiance *= ${mat.userData.glow ? '0.7 + 0.55 * pow(0.5 + 0.5 * sin(swS * 2.4 - uTime * 2.6), 3.0)' : '1.0'};
+          totalEmissiveRadiance += mix(uGlowA, uGlowB, swK) * gridGlow * (1.1 + 0.9 * pow(0.5 + 0.5 * sin(swS * 2.4 - uTime * 2.6), 3.0));
           totalEmissiveRadiance += uSwEdge * exp(-abs(swS - uSweep) * 22.0) * uSwOn * 1.8;`,
         );
     };

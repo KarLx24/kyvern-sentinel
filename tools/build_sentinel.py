@@ -185,8 +185,10 @@ def finish(name, bm, mat, parent, loc=(0, 0, 0), rot=(0, 0, 0), bevel=0.012, seg
         ob.rotation_euler = [R(a) for a in rot]
     if bevel > 0:
         m = ob.modifiers.new('Bevel', 'BEVEL')
-        m.width = bevel
-        m.segments = segs
+        # wide, rounded edges: every plate edge catches a soft highlight instead of a hard line
+        m.width = bevel * 1.8
+        m.segments = max(segs, 3)
+        m.profile = 0.6
         m.limit_method = 'ANGLE'
         m.angle_limit = R(34)
         w = ob.modifiers.new('Normals', 'WEIGHTED_NORMAL')

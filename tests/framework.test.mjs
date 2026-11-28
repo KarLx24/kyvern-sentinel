@@ -78,13 +78,13 @@ test('forms only name joints that exist, and a form change arrives', () => {
     for (const key of Object.keys(FORMS.sentinel.params)) assert.equal(typeof f.params[key], 'number', `${id}.${key}`);
   }
   const forms = new Forms(rig, FORMS, 'sentinel');
-  assert.equal(forms.set('flight'), true);
+  assert.equal(forms.set('vehicle'), true);
   assert.ok(forms.busy);
   settle(rig, forms);
   assert.ok(!forms.busy);
-  assert.equal(forms.params.fanTop, FORMS.flight.params.fanTop);
-  assert.ok(Math.abs(forms.height - FORMS.flight.height) < 1e-9);
-  assert.equal(forms.set('flight'), false);
+  assert.equal(forms.params.fanTop, FORMS.vehicle.params.fanTop);
+  assert.ok(Math.abs(forms.height - FORMS.vehicle.height) < 1e-9);
+  assert.equal(forms.set('vehicle'), false);
 });
 
 test('wings fold away and spread again', () => {
@@ -114,7 +114,7 @@ test('every colour line paints every role, and chapters point at real things', (
     else assert.ok(c.label && c.lines.length, c.id);
     if (c.form) assert.ok(FORMS[c.form], c.id);
   }
-  assert.ok(STATES.idle && STATES.thinking);
+  assert.ok(STATES.guard && STATES.combat);
 });
 
 test('the tour plays chapters in order and hands back at the end', () => {

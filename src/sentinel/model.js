@@ -214,14 +214,14 @@ export function buildSentinel(rig, m) {
 export function attachWings(handles) {
   const smooth = (x) => { const t = Math.min(1, Math.max(0, x)); return t * t * t * (t * (t * 6 - 15) + 10); };
   handles.wings = (open, top, bottom, flutter, forms) => {
-    const arm = smooth(open / 0.7);
+    const arm = smooth(open / 0.82);
     const fold = 1 - arm;
     for (const side of ['l', 'r']) forms.nudge(`wingdrive_${side}`, 0, fold * -0.5, fold * -2.05);
     for (const set of handles.feathers) {
       const n = set.length - 1;
       set.forEach((blade, i) => {
         const k = i / n;
-        const out = smooth((open - 0.12 - k * 0.3) / 0.58); // each blade starts a little after the one above, and they overlap
+        const out = smooth((open - 0.06 - k * 0.22) / 0.72); // each blade starts a little after the one above, and they overlap
         const spread = top + (bottom - top) * k + Math.sin(flutter + i * 0.5) * 0.6 * out;
         const tucked = 20 + k * 6; // stacked along the folded arm
         blade.rotation.z = ((tucked + (spread - tucked) * out) * Math.PI) / 180;

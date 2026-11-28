@@ -14,6 +14,7 @@ export class Walker {
     this.range = opts.range || 24;
     this.held = new Set();
     this.pad = { fwd: 0, turn: 0 };
+    this.auto = { fwd: 0, turn: 0 }; // set by the page when he flies on his own; never counts as the user taking control
     this.fwd = 0;
     this.turn = 0;
     this.heading = 0;
@@ -44,7 +45,12 @@ export class Walker {
     }
     fwd = Math.max(-1, Math.min(1, fwd));
     turn = Math.max(-1, Math.min(1, turn));
-    if ((fwd || turn) && !this.moving && this.onStart) this.onStart();
+    if ((fwd || turn) && !this.steering && this.onStart) this.onStart();
+    this.steering = !!(fwd || turn); // true while the user is driving
+    if (!this.steering) {
+      fwd = this.auto.fwd;
+      turn = this.auto.turn;
+    }
     this.fwd = damp(this.fwd, fwd, 6, dt);
     this.turn = damp(this.turn, turn, 7, dt);
 
@@ -88,16 +94,22 @@ export class Walker {
   }
 }
 
-// Idle life and the four assistant states. `state` is one entry of the model's STATES.
+// Idle life and the states. `state` is one entry of the model's STATES: numbers that set how
+// he looks and lights up, plus an optional `pose` of extra joint rotation in degrees.
+const NUM = { pulse: 1, level: 1, look: 1, sway: 1, lean: 0, spin: 1, tiltHead: 0, talk: 0, scan: 0, flare: 0, beat: 0, drop: 0 };
+const RAD = Math.PI / 180;
+
 export class Behaviour {
   constructor(forms) {
     this.forms = forms;
     this.t = 0;
     this.look = { x: 0, y: 0 };
     this.pointer = { x: 0, y: 0, at: -1e9 };
-    this.cur = { pulse: 1, level: 1, look: 1, sway: 1, lean: 0, spin: 1, tiltHead: 0, talk: 0 };
+    this.cur = { ...NUM };
+    this.pose = new Map(); // joint id -> [x, y, z] degrees, eased toward the state's pose
     this.voice = 0;
     this.surge = 0;
+    this.sweep = 0; // where the head is in its scan, -1..1
     window.addEventListener('pointermove', (e) => {
       this.pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
       this.pointer.y = (e.clientY / window.innerHeight) * 2 - 1;
@@ -109,8 +121,17 @@ export class Behaviour {
     this.t += dt;
     const t = this.t;
     const cur = this.cur;
-    for (const k of Object.keys(cur)) cur[k] = damp(cur[k], state[k] ?? (k === 'spin' ? 1 : k === 'lean' || k === 'tiltHead' || k === 'talk' ? 0 : 1), 4, dt);
+    for (const k of Object.keys(cur)) cur[k] = damp(cur[k], state[k] ?? NUM[k], k === 'beat' || k === 'flare' ? 2.2 : 4, dt);
     this.surge = damp(this.surge, 0, 1.4, dt);
+
+    // the state's pose eases in and out joint by joint; `calm` (flying) switches it off
+    const f = this.forms;
+    for (const id of Object.keys(state.pose || {})) if (!this.pose.has(id)) this.pose.set(id, [0, 0, 0]);
+    for (const [id, v] of this.pose) {
+      const goal = state.pose?.[id];
+      for (let i = 0; i < 3; i++) v[i] = damp(v[i], (goal ? goal[i] : 0) * (calm >= 1 ? 1 : 0), 3.2, dt);
+      if (Math.abs(v[0]) + Math.abs(v[1]) + Math.abs(v[2]) > 0.01) f.nudge(id, v[0] * RAD, v[1] * RAD, v[2] * RAD);
+    }
 
     // look at the pointer; drift on his own when nobody has moved it for a while
     const away = performance.now() - this.pointer.at > 3500;
@@ -119,18 +140,19 @@ export class Behaviour {
     this.look.x = damp(this.look.x, tx, 3.5, dt);
     this.look.y = damp(this.look.y, ty, 3.5, dt);
     const w = cur.look * calm;
-    const f = this.forms;
+    // scanning: the head sweeps slowly from side to side and the chest follows a little
+    this.sweep = Math.sin(t * 0.9) * cur.scan * calm;
     this.voice = cur.talk * (0.5 + 0.5 * Math.sin(t * 9.1) * Math.sin(t * 5.3 + 1) + 0.25 * Math.sin(t * 17));
-    f.nudge('helm', this.look.y * 0.22 * w + this.voice * 0.03, this.look.x * 0.5 * w, (cur.tiltHead * Math.PI) / 180);
-    f.nudge('chest', Math.sin(t * 1.25) * 0.012 * cur.sway, this.look.x * 0.08 * w, 0);
-    f.nudge('abdomen', (cur.lean * Math.PI) / 180 + Math.sin(t * 1.25 + 0.6) * 0.008 * cur.sway, this.look.x * 0.05 * w, 0);
+    f.nudge('helm', this.look.y * 0.22 * w + this.voice * 0.03 + cur.scan * calm * 0.06, this.look.x * 0.5 * w + this.sweep * 0.95, (cur.tiltHead * Math.PI) / 180);
+    f.nudge('chest', Math.sin(t * 1.25) * 0.012 * cur.sway, this.look.x * 0.08 * w + this.sweep * 0.16, 0);
+    f.nudge('abdomen', (cur.lean * Math.PI) / 180 + Math.sin(t * 1.25 + 0.6) * 0.008 * cur.sway, this.look.x * 0.05 * w + this.sweep * 0.08, 0);
     for (const side of ['l', 'r']) {
       f.nudge(`shoulder_${side}`, 0, 0, Math.sin(t * 1.25 + 0.4) * 0.014 * cur.sway);
       f.nudge(`wingdrive_${side}`, 0, 0, Math.sin(t * 0.8) * 0.012 * cur.sway);
     }
     // light levels the model reads
     this.core = cur.level * (0.82 + 0.18 * Math.sin(t * cur.pulse * 2)) + this.voice * 0.5 + this.surge * 1.6;
-    this.seam = 0.9 + 0.1 * Math.sin(t * cur.pulse * 2 - 1) + this.surge * 0.9 + this.voice * 0.25;
+    this.seam = cur.level * 0.25 + 0.68 + 0.1 * Math.sin(t * cur.pulse * 2 - 1) + this.surge * 0.9 + this.voice * 0.25;
     this.spin = cur.spin;
   }
 }
