@@ -20,7 +20,7 @@ const CENTRE = [
   { id: 'abdomen', node: 'abdomen', parent: 'pelvis', label: 'Abdomen', section: 'torso', explode: [0, 0.26, 0], note: 'Waist joint with sliding plates.' },
   { id: 'chest', node: 'chest', parent: 'abdomen', label: 'Chest', section: 'torso', explode: [0, 0.3, 0], note: 'Rib cage, pectoral plates and the back pack.' },
   { id: 'core', node: 'core', parent: 'chest', label: 'Core', section: 'core', explode: [0, 0, 0.7], note: 'Reactor. Its light changes with what Kyvern is doing.' },
-  { id: 'helm', node: 'helm', parent: 'chest', label: 'Helm', section: 'helm', explode: [0, 0.45, 0], note: 'Head. The visor follows whoever he is looking at.' },
+  { id: 'helm', node: 'helm', parent: 'chest', label: 'Helm', section: 'helm', explode: [0, 0.45, 0], note: 'Head. Two eyes under a V brow, a three-blade crown and swept temple fins.' },
 ];
 const SIDE = [
   { id: 'shoulder', parent: 'chest', label: 'Shoulder', section: 'shoulders', explode: [0.5, 0.12, 0], note: 'Ball joint that carries the arm.' },
