@@ -81,6 +81,9 @@ export class Paint {
         .replace(
           '#include <color_fragment>',
           `#include <color_fragment>
+          #ifdef USE_COLOR_ALPHA
+            diffuseColor.a = opacity; // the model's colour alpha marks panel lines, it is not transparency
+          #endif
           float swS = length(vSwp - uSwOrigin);
           float swK = 1.0 - smoothstep(uSweep - 0.03, uSweep + 0.03, swS);
           vec3 swTo = uToColor;
@@ -93,7 +96,13 @@ export class Paint {
               float gEdge = smoothstep(0.1, 0.55, length(fwidth(normalize(vNormal))) * 2.4);
               vec3 gp = abs(fract(vRest * vec3(2.5, 2.5, 3.5)) - 0.5);
               float gLine = smoothstep(0.482, 0.496, max(gp.x, gp.z));
-              gridGlow = clamp(gEdge + gLine * 0.85, 0.0, 1.0) * uGrid;
+              #ifdef USE_COLOR_ALPHA
+                // the model has real panel lines: light those as circuits and leave only a faint edge glint
+                gLine = smoothstep(0.3, 0.85, 1.0 - vColor.a);
+                gridGlow = clamp(gLine + gEdge * 0.1, 0.0, 1.0) * uGrid;
+              #else
+                gridGlow = clamp(gEdge + gLine * 0.85, 0.0, 1.0) * uGrid;
+              #endif
               diffuseColor.rgb *= mix(1.0, 0.07, uGrid);
             }
           #endif

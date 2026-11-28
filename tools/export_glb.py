@@ -50,6 +50,7 @@ def bake_shading(reach=0.42, rays=20, floor=0.22):
             mw = ob.matrix_world
             nm = mw.to_3x3().inverted_safe().transposed()
             col = me.color_attributes.new('Color', 'FLOAT_COLOR', 'POINT')
+            line = me.attributes.get('line')  # panel lines, tagged by the build script
             for v in me.vertices:
                 n = (nm @ v.normal).normalized()
                 t = n.orthogonal().normalized()
@@ -61,7 +62,8 @@ def bake_shading(reach=0.42, rays=20, floor=0.22):
                     if hit[0] is not None:
                         occ += 1.0 - hit[3] / reach
                 k = max(floor, 1.0 - 1.35 * occ / rays)
-                col.data[v.index].color = (k, k, k, 1.0)
+                # alpha carries the panel lines (0 on a line): they light up in the light-line form
+                col.data[v.index].color = (k, k, k, 1.0 - (line.data[v.index].value if line else 0.0))
             me.color_attributes.active_color = col
             me.color_attributes.render_color_index = 0
 
